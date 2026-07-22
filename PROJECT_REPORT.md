@@ -107,6 +107,12 @@
 | 4 | 数据上传 | 待开始 | 0% |
 | 5 | 界面开发 | 待开始 | 0% |
 
+## Git仓库信息
+
+- **仓库地址**: https://github.com/YANGQINGFEENG/shumeipaiyolo.git
+- **当前分支**: master
+- **提交状态**: 已本地提交，待推送
+
 ## 文件结构
 
 ```
