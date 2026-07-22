@@ -39,3 +39,10 @@ Thumbs.db
 *.tmp
 *.temp
 *.log
+
+# Project specific
+logs/
+results/
+models/*.pt
+*.onnx
+*.tflite

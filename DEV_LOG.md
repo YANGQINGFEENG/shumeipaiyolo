@@ -44,6 +44,26 @@
   - 验证YOLO模型在树莓派上的运行效果
   - 开发数据采集和上传模块
 
+### 事件: AI开发框架搭建
+
+- **时间**: 2026-07-22 19:45
+- **类型**: 开发
+- **总结**: 创建完整的AI开发框架，包括远程部署工具、传感器包、测试框架、数据上传和状态页面
+- **详细内容**:
+  - 创建 `sensors/base.py` - BaseSensor抽象类和SensorHub管理器
+  - 创建 `config.yaml` - 统一配置文件 (引脚、上传、日志)
+  - 创建 `pi_deploy.py` - 远程部署执行工具 (通过JupyterLab API)
+  - 实现示例传感器: LedSensor, UltrasonicSensor, Bmp280Sensor
+  - 创建 `upload/` - HTTP JSON和MQTT数据上传模块
+  - 创建 `tests/` - pytest自动化测试框架
+  - 创建 `status/` - Flask简单状态页面
+  - 更新 `.gitignore` 和项目文档
+- **规划**:
+  - 下一步：完善所有传感器实现
+  - 集成YOLO检测模块
+  - 在树莓派上部署和测试
+  - 配置数据上传到本地服务器
+
 ---
 
 > 日志格式说明：

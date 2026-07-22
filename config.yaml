@@ -1,0 +1,95 @@
+# 树莓派YOLO传感器项目配置
+# Raspberry Pi YOLO Sensor Project Configuration
+
+# 引脚分配
+pins:
+  # 数字传感器
+  digital:
+    led:
+      red: 17
+      green: 18
+      blue: 27
+    buzzer:
+      pin: 22
+    relay:
+      pin: 23
+    button:
+      pin: 24
+
+  # 超声波传感器
+  ultrasonic:
+    trigger: 23
+    echo: 24
+
+  # ADC (MCP3008 SPI)
+  adc:
+    cs: 8
+
+  # I2C 设备地址
+  i2c:
+    lcd1602: 0x27
+    bmp280: 0x76
+    mpu6050: 0x68
+    ds1307: 0x68
+    max30102: 0x57
+
+  # PIR 人体感应
+  pir:
+    pin: 25
+
+  # DS18B20 温度传感器 (1-Wire)
+  ds18b20:
+    device_folder: "/sys/bus/w1/devices/"
+
+# YOLO配置
+yolo:
+  model: "yolov8n.pt"
+  confidence: 0.5
+  camera_index: 0
+  image_size: 640
+
+# 数据上传配置 (本地服务器)
+upload:
+  # HTTP JSON API
+  http:
+    server: "http://192.168.1.100:8080"
+    endpoint: "/api/data"
+    interval: 60
+    timeout: 10
+
+  # MQTT
+  mqtt:
+    broker: "192.168.1.100"
+    port: 1883
+    topic_prefix: "raspberrypi/sensors"
+    username: ""
+    password: ""
+    qos: 1
+
+  # FTP
+  ftp:
+    server: "192.168.1.100"
+    port: 21
+    username: "pi"
+    password: ""
+    upload_dir: "/uploads"
+
+# 日志配置
+logging:
+  level: "INFO"
+  file: "/home/pi/yolo_sensor/logs/app.log"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# 远程开发配置
+jupyter:
+  url: "http://192.168.1.63:8888"
+
+# 传感器采集间隔 (秒)
+collection:
+  interval: 5
+  batch_size: 10
+
+# 结果保存
+results:
+  directory: "/home/pi/yolo_sensor/results"
+  max_images: 100

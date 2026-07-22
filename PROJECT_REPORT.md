@@ -137,27 +137,48 @@
 | 阶段  | 任务     | 状态  | 完成度 |
 | --- | ------ | --- | --- |
 | 1   | 环境搭建   | 已完成 | 100% |
-| 2   | 传感器测试  | 待开始 | 0%  |
-| 3   | YOLO集成 | 待开始 | 0%  |
-| 4   | 数据上传   | 待开始 | 0%  |
-| 5   | 界面开发   | 待开始 | 0%  |
+| 2   | 基础框架   | 已完成 | 100% |
+| 3   | 传感器包   | 部分完成 | 60%  |
+| 4   | 测试框架   | 已完成 | 100% |
+| 5   | 数据上传   | 已完成 | 100% |
+| 6   | 状态页面   | 已完成 | 100% |
+| 7   | YOLO集成 | 待开始 | 0%  |
 
 ## Git仓库信息
 
 - **仓库地址**: https://github.com/YANGQINGFEENG/shumeipaiyolo.git
 - **当前分支**: master
-- **提交状态**: 已本地提交，待推送
 
-## 文件结构
+## 项目结构
 
 ```
-├── PROJECT_REPORT.md          # 本报告（实时更新）
+├── PROJECT_REPORT.md          # 项目报告（实时更新）
 ├── DEV_LOG.md                 # 开发日志
+├── config.yaml                # 统一配置文件
+├── pi_deploy.py               # 远程部署执行工具
 ├── 相关配置列表.md             # 硬件配置清单
-├── 相关的设置.txt              # 设置文件
 ├── .mimocode/                 # AI代理配置
 │   └── rules.md               # 项目规则
-├── 3.程序案例/                # 传感器实验代码
+├── sensors/                   # 传感器统一抽象包
+│   ├── base.py                # BaseSensor基类 + SensorHub
+│   ├── digital/               # 数字传感器 (LED, 蜂鸣器, 继电器)
+│   ├── analog/                # 模拟传感器 (光敏, 温度, 声音)
+│   ├── i2c/                   # I2C传感器 (BMP280, MPU6050, LCD1602)
+│   └── special/               # 特殊协议 (超声波, DS18B20, PIR, RFID)
+├── upload/                    # 数据上传模块
+│   ├── http_uploader.py       # HTTP JSON上传
+│   └── mqtt_uploader.py       # MQTT发布
+├── status/                    # 简单状态页面
+│   ├── app.py                 # Flask应用
+│   └── templates/index.html   # 状态页面
+├── tests/                     # pytest测试套件
+│   ├── conftest.py            # 测试fixtures
+│   └── test_sensors.py        # 传感器测试
+├── models/                    # YOLO模型文件
+├── scripts/                   # 脚本工具
+├── logs/                      # 日志文件
+├── results/                   # 检测结果
+├── 3.程序案例/                # 原有传感器实验代码
 │   └── makerobo_code/         # 41个实验案例
 └── 7.树莓派电子资料/           # 树莓派技术文档
 ```

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>树莓派传感器状态</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { text-align: center; margin-bottom: 30px; color: #00d4ff; }
+        .card { background: #16213e; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .card h2 { color: #00d4ff; margin-bottom: 15px; font-size: 1.2em; }
+        .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .stat { text-align: center; padding: 15px; background: #0f3460; border-radius: 8px; }
+        .stat .value { font-size: 2em; font-weight: bold; color: #00d4ff; }
+        .stat .label { font-size: 0.9em; color: #888; margin-top: 5px; }
+        .sensor-list { list-style: none; }
+        .sensor-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #0f3460; }
+        .sensor-item:last-child { border-bottom: none; }
+        .sensor-name { font-weight: bold; }
+        .sensor-value { color: #00d4ff; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+        .status-ok { background: #00ff88; }
+        .status-error { background: #ff4444; }
+        .status-warning { background: #ffaa00; }
+        .timestamp { text-align: center; color: #666; margin-top: 20px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>树莓派传感器状态</h1>
+
+        <div class="card">
+            <h2>系统状态</h2>
+            <div class="stat-grid">
+                <div class="stat">
+                    <div class="value" id="temp">--</div>
+                    <div class="label">CPU温度</div>
+                </div>
+                <div class="stat">
+                    <div class="value" id="mem">--</div>
+                    <div class="label">内存使用</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>传感器状态</h2>
+            <ul class="sensor-list" id="sensors">
+                <li>加载中...</li>
+            </ul>
+        </div>
+
+        <div class="timestamp" id="timestamp">--</div>
+    </div>
+
+    <script>
+        function updateStatus() {
+            fetch('/api/status')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('temp').textContent = data.system.temperature + '°C';
+                    document.getElementById('mem').textContent = data.system.memory_percent + '%';
+
+                    const sensorList = document.getElementById('sensors');
+                    sensorList.innerHTML = '';
+                    for (const [name, info] of Object.entries(data.sensors)) {
+                        const li = document.createElement('li');
+                        li.className = 'sensor-item';
+                        li.innerHTML = `
+                            <span><span class="status-dot status-${info.status}"></span>${name}</span>
+                            <span class="sensor-value">${info.last_value}</span>
+                        `;
+                        sensorList.appendChild(li);
+                    }
+
+                    document.getElementById('timestamp').textContent = '更新时间: ' + data.timestamp;
+                })
+                .catch(err => console.error('Error:', err));
+        }
+
+        updateStatus();
+        setInterval(updateStatus, 5000);
+    </script>
+</body>
+</html>
