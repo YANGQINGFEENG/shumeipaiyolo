@@ -19,11 +19,11 @@
   - 初始化Git仓库
   - 配置远程仓库: https://github.com/YANGQINGFEENG/shumeipaiyolo.git
   - 完成首次本地提交
+  - 成功推送到远程仓库
 - **规划**:
   - 下一步：配置树莓派开发环境
   - 测试传感器模块连接
   - 部署YOLO检测模型
-  - 推送代码到远程仓库
 
 ---
 
