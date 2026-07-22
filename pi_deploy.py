@@ -32,7 +32,7 @@ logger = logging.getLogger("pi_deploy")
 
 # 默认配置
 DEFAULT_JUPYTER_URL = "http://192.168.1.63:8888"
-DEFAULT_PROJECT_DIR = "/home/pi/yolo_sensor"
+DEFAULT_PROJECT_DIR = "/home/pi/makerobo_code/yolo_sensor"
 
 
 class PiDeploy:
