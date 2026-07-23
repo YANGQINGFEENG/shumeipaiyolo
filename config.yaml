@@ -62,16 +62,24 @@ yolo:
   camera_index: 0
   image_size: 640
 
-# 数据上传配置 (本地服务器)
+# 数据上传配置 (智慧农业物联网平台)
 upload:
   # HTTP JSON API
   http:
-    server: "http://192.168.1.100:8080"
-    endpoint: "/api/data"
+    server: "http://localhost:3000"
+    report_endpoint: "/api/device/report"
+    sensor_endpoint: "/api/sensors"
     interval: 60
     timeout: 10
 
-  # MQTT
+  # 设备信息 (根据实际情况修改)
+  device:
+    gateway_ip: "192.168.1.63"
+    gateway_type: "wifi_sensor"
+    mac: "AA:BB:CC:DD:EE:FF"
+    farm_id: 1
+
+  # MQTT (备用)
   mqtt:
     broker: "192.168.1.100"
     port: 1883
@@ -79,14 +87,6 @@ upload:
     username: ""
     password: ""
     qos: 1
-
-  # FTP
-  ftp:
-    server: "192.168.1.100"
-    port: 21
-    username: "pi"
-    password: ""
-    upload_dir: "/uploads"
 
 # 日志配置
 logging:
