@@ -52,8 +52,8 @@ def main():
     # BMP280 气压: I2C
     hub.register(Bmp280Sensor(name="bmp280"))
 
-    # 超声波: trigger=23, echo=24
-    hub.register(UltrasonicSensor(trigger=23, echo=24, name="ultrasonic"))
+    # 超声波: 暂无硬件
+    # hub.register(UltrasonicSensor(trigger=23, echo=24, name="ultrasonic"))
 
     # 模拟传感器 (通过MCP3008)
     hub.register(LightSensor(channel=0, name="light"))
