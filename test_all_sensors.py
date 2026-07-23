@@ -49,8 +49,8 @@ def main():
     # 温湿度: G6
     hub.register(DhtSensor(pin=6, name="dht"))
 
-    # BMP280 气压: I2C 0x76
-    hub.register(Bmp280Sensor(address=0x76, name="bmp280"))
+    # BMP280 气压: I2C
+    hub.register(Bmp280Sensor(name="bmp280"))
 
     # 超声波: trigger=23, echo=24
     hub.register(UltrasonicSensor(trigger=23, echo=24, name="ultrasonic"))
