@@ -25,7 +25,7 @@ def main():
     print()
 
     # 配置
-    API_SERVER = "http://26.162.225.180:3000"
+    API_SERVER = "http://192.168.1.22:3000"
     GATEWAY_IP = "192.168.1.63"
     MAC_ADDRESS = "AA:BB:CC:DD:EE:FF"
     FARM_ID = 1
