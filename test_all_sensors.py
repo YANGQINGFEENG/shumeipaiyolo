@@ -7,19 +7,16 @@
 import sys
 import os
 import time
-import json
 
 sys.path.insert(0, '/home/pi/makerobo_code/yolo_sensor')
 
 from sensors.base import SensorHub
 from sensors.digital import (
-    LedSensor, ButtonSensor, BuzzerSensor,
     RgbLedSensor, RelaySensor, LaserSensor,
     VibrationSensor, DhtSensor
 )
 from sensors.analog import LightSensor, PotentiometerSensor, SoundSensor
-from sensors.i2c import Bmp280Sensor, Mpu6050Sensor
-from sensors.special import UltrasonicSensor, Ds18b20Sensor, PirSensor
+from sensors.i2c import Bmp280Sensor
 
 
 def main():
@@ -31,7 +28,7 @@ def main():
 
     hub = SensorHub()
 
-    # 注册所有传感器 (使用实际硬件引脚)
+    # 注册传感器 (使用实际硬件引脚)
     print("初始化传感器...")
 
     # RGB-LED: R=G19, G=G17, B=G27
@@ -51,9 +48,6 @@ def main():
 
     # BMP280 气压: I2C
     hub.register(Bmp280Sensor(name="bmp280"))
-
-    # 超声波: 暂无硬件
-    # hub.register(UltrasonicSensor(trigger=23, echo=24, name="ultrasonic"))
 
     # 模拟传感器 (通过MCP3008)
     hub.register(LightSensor(channel=0, name="light"))
@@ -81,24 +75,18 @@ def main():
     print("  传感器数据读取")
     print("=" * 60)
 
-    for _ in range(3):  # 读取3次
+    for _ in range(3):
         print(f"\n--- 第{_+1}次读取 ---")
         data = hub.read_all()
         for name, reading in data.items():
             if reading["status"] == "ok":
                 sensor_data = reading["data"]
-                # 格式化输出
                 if name == "rgb_led":
                     print(f"  {name:15} : R={sensor_data.get('red', 0):.3f} G={sensor_data.get('green', 0):.3f} B={sensor_data.get('blue', 0):.3f}")
-                elif name == "ultrasonic":
-                    print(f"  {name:15} : {sensor_data.get('distance_cm', 0):.1f} cm")
                 elif name == "dht":
                     print(f"  {name:15} : {sensor_data.get('temperature', 'N/A')}°C  {sensor_data.get('humidity', 'N/A')}%")
                 elif name == "bmp280":
                     print(f"  {name:15} : {sensor_data.get('temperature', 'N/A')}°C  {sensor_data.get('pressure', 'N/A')} hPa")
-                elif name == "mpu6050":
-                    accel = sensor_data.get('accelerometer', {})
-                    print(f"  {name:15} : Accel X={accel.get('x', 0):.3f} Y={accel.get('y', 0):.3f} Z={accel.get('z', 0):.3f}")
                 elif name == "light":
                     print(f"  {name:15} : {sensor_data.get('lux', 0)}")
                 elif name == "potentiometer":
