@@ -1,155 +1,164 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-主程序 - 传感器数据采集与YOLO检测
+持续传感器数据采集与上传
+在树莓派终端运行: python3 main.py
 """
 
 import sys
 import os
-import yaml
-import logging
+import time
 import signal
+import logging
 
-# 添加项目路径
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, '/home/pi/makerobo_code/yolo_sensor')
 
 from sensors.base import SensorHub
-from sensors.camera import CameraSensor
-from sensors.yolo_detector import YoloDetector
-from sensors.digital import LedSensor, ButtonSensor, BuzzerSensor
-from sensors.analog import LightSensor, PotentiometerSensor, SoundSensor
-from sensors.i2c import Bmp280Sensor, Mpu6050Sensor
-from sensors.special import UltrasonicSensor, Ds18b20Sensor, PirSensor, Mfrc522Sensor
+from sensors.digital import RgbLedSensor, RelaySensor, LaserSensor, VibrationSensor, DhtSensor
+from sensors.i2c import Bmp280Sensor
 from upload.http_uploader import HttpUploader
-from upload.mqtt_uploader import MqttUploader
-from upload.collector import DataCollector
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("/home/pi/makerobo_code/yolo_sensor/logs/upload.log")
+    ]
+)
 logger = logging.getLogger(__name__)
 
+# 配置
+API_SERVER = "http://192.168.1.22:3000"
+GATEWAY_IP = "192.168.1.63"
+MAC_ADDRESS = "AA:BB:CC:DD:EE:FF"
+FARM_ID = 1
+UPLOAD_INTERVAL = 30  # 上传间隔（秒）
 
-def load_config(config_path: str = "config.yaml") -> dict:
-    with open(config_path, "r") as f:
-        return yaml.safe_load(f)
+# 全局变量
+running = True
 
 
-def setup_sensors(config: dict) -> SensorHub:
-    """初始化所有传感器"""
-    hub = SensorHub()
-    pins = config.get("pins", {})
-
-    # 数字传感器
-    digital = pins.get("digital", {})
-    hub.register(LedSensor(pin=digital.get("led", {}).get("red", 17), name="led_red"))
-    hub.register(ButtonSensor(pin=digital.get("button", {}).get("pin", 24)))
-    hub.register(BuzzerSensor(pin=digital.get("buzzer", {}).get("pin", 22)))
-
-    # 模拟传感器 (通过MCP3008)
-    hub.register(LightSensor(channel=0, name="light"))
-    hub.register(PotentiometerSensor(channel=1, name="potentiometer"))
-    hub.register(SoundSensor(channel=2, name="sound"))
-
-    # I2C传感器
-    i2c = pins.get("i2c", {})
-    hub.register(Bmp280Sensor(address=i2c.get("bmp280", 0x76)))
-    hub.register(Mpu6050Sensor(address=i2c.get("mpu6050", 0x68)))
-
-    # 特殊传感器
-    hub.register(UltrasonicSensor(trigger=18, echo=17))
-    hub.register(PirSensor(pin=pins.get("pir", {}).get("pin", 17)))
-
-    # DS18B20 (如果启用)
-    hub.register(Ds18b20Sensor())
-
-    return hub
+def signal_handler(sig, frame):
+    """信号处理，优雅退出"""
+    global running
+    logger.info("收到退出信号，正在停止...")
+    running = False
 
 
 def main():
-    """主函数"""
-    logger.info("=" * 60)
-    logger.info("  Raspberry Pi YOLO Sensor System")
-    logger.info("=" * 60)
+    global running
 
-    # 加载配置
-    config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
-    config = load_config(config_path)
-    logger.info("Config loaded")
+    print("=" * 60)
+    print("  智慧农业传感器数据持续上传")
+    print("  Smart Agriculture Continuous Upload")
+    print("=" * 60)
+    print()
 
-    # 初始化传感器
-    hub = setup_sensors(config)
-    logger.info(f"Sensors initialized: {hub.list()}")
-
-    # 初始化摄像头
-    camera = CameraSensor()
-    camera.initialize()
-    logger.info("Camera initialized")
-
-    # 初始化YOLO
-    yolo_config = config.get("yolo", {})
-    yolo = YoloDetector(
-        model_path=yolo_config.get("model", "yolov8n.pt"),
-        confidence=yolo_config.get("confidence", 0.5)
-    )
-    yolo.initialize()
-    logger.info("YOLO initialized")
-
-    # 初始化上传器
-    upload_config = config.get("upload", {})
-    http_config = upload_config.get("http", {})
-    mqtt_config = upload_config.get("mqtt", {})
-
-    http_uploader = None
-    if http_config.get("server"):
-        http_uploader = HttpUploader(
-            server=http_config["server"],
-            endpoint=http_config.get("endpoint", "/api/data")
-        )
-        logger.info("HTTP uploader ready")
-
-    mqtt_uploader = None
-    if mqtt_config.get("broker"):
-        mqtt_uploader = MqttUploader(
-            broker=mqtt_config["broker"],
-            port=mqtt_config.get("port", 1883),
-            topic_prefix=mqtt_config.get("topic_prefix", "raspberrypi/sensors")
-        )
-        mqtt_uploader.connect()
-        logger.info("MQTT uploader ready")
-
-    # 创建数据采集器
-    collector = DataCollector(
-        hub=hub,
-        camera=camera,
-        yolo=yolo,
-        http_uploader=http_uploader,
-        mqtt_uploader=mqtt_uploader
-    )
-
-    # 信号处理
-    def signal_handler(sig, frame):
-        logger.info("Shutting down...")
-        collector.stop()
-        hub.cleanup_all()
-        camera.cleanup()
-        yolo.cleanup()
-        if mqtt_uploader:
-            mqtt_uploader.disconnect()
-        sys.exit(0)
-
+    # 注册信号处理
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
-    # 测试传感器
-    logger.info("\n--- Sensor Test ---")
-    results = hub.test_all()
-    for name, result in results.items():
-        status = "OK" if result["status"] == "ok" else "FAIL"
-        logger.info(f"  {name}: {status}")
+    # 创建日志目录
+    os.makedirs("/home/pi/makerobo_code/yolo_sensor/logs", exist_ok=True)
 
-    # 开始采集循环
-    interval = config.get("collection", {}).get("interval", 60)
-    logger.info(f"\nStarting data collection (interval={interval}s)...")
-    collector.run_loop(interval=interval)
+    # 初始化传感器
+    logger.info("初始化传感器...")
+    hub = SensorHub()
+    hub.register(RgbLedSensor(red=19, green=17, blue=27, name="rgb_led"))
+    hub.register(RelaySensor(pin=16, name="relay"))
+    hub.register(LaserSensor(pin=13, name="laser"))
+    hub.register(VibrationSensor(pin=12, name="vibration"))
+    hub.register(DhtSensor(pin=6, sensor_type="DHT11", name="dht"))
+    hub.register(Bmp280Sensor(name="bmp280"))
+    logger.info(f"已注册 {len(hub.list())} 个传感器: {hub.list()}")
+
+    # 初始化上传器
+    logger.info("初始化上传器...")
+    uploader = HttpUploader(
+        server=API_SERVER,
+        gateway_ip=GATEWAY_IP,
+        mac=MAC_ADDRESS,
+        farm_id=FARM_ID
+    )
+
+    # 测试API连接
+    import requests
+    try:
+        resp = requests.get(f"{API_SERVER}/api/farms", timeout=5)
+        if resp.status_code == 200:
+            logger.info("✓ API服务器连接成功")
+        else:
+            logger.warning(f"API返回状态码: {resp.status_code}")
+    except Exception as e:
+        logger.error(f"✗ API服务器连接失败: {e}")
+        logger.info("将继续尝试连接...")
+
+    print()
+    logger.info(f"开始持续上传，间隔 {UPLOAD_INTERVAL} 秒")
+    logger.info("按 Ctrl+C 停止")
+    print()
+
+    # 持续上传循环
+    upload_count = 0
+    error_count = 0
+
+    while running:
+        try:
+            # 读取传感器数据
+            readings = hub.read_all()
+
+            # 显示读取结果
+            logger.info("--- 读取传感器数据 ---")
+            for name, reading in readings.items():
+                if reading["status"] == "ok":
+                    data = reading["data"]
+                    if name == "dht":
+                        logger.info(f"  {name}: 温度={data.get('temperature', 'N/A')}°C 湿度={data.get('humidity', 'N/A')}%")
+                    elif name == "bmp280":
+                        logger.info(f"  {name}: 温度={data.get('temperature', 'N/A')}°C 气压={data.get('pressure', 'N/A')}hPa")
+                    elif name == "vibration":
+                        logger.info(f"  {name}: {'振动' if data.get('vibrating') else '静止'}")
+                    else:
+                        logger.info(f"  {name}: {data}")
+
+            # 上传数据
+            logger.info("--- 上传数据 ---")
+            success = uploader.upload_all(readings)
+
+            if success:
+                upload_count += 1
+                logger.info(f"✓ 上传成功 (累计: {upload_count})")
+            else:
+                error_count += 1
+                logger.warning(f"✗ 上传失败 (错误: {error_count})")
+
+            # 等待下一次上传
+            logger.info(f"等待 {UPLOAD_INTERVAL} 秒...")
+            print()
+
+            # 分段等待，以便响应退出信号
+            for _ in range(UPLOAD_INTERVAL):
+                if not running:
+                    break
+                time.sleep(1)
+
+        except Exception as e:
+            logger.error(f"循环错误: {e}")
+            error_count += 1
+            time.sleep(5)
+
+    # 清理
+    logger.info("正在清理资源...")
+    hub.cleanup_all()
+
+    print()
+    logger.info("=" * 60)
+    logger.info(f"  运行结束")
+    logger.info(f"  上传次数: {upload_count}")
+    logger.info(f"  错误次数: {error_count}")
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":
