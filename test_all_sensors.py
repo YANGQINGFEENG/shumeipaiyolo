@@ -43,8 +43,8 @@ def main():
     # 振动开关: G12
     hub.register(VibrationSensor(pin=12, name="vibration"))
 
-    # 温湿度: G6
-    hub.register(DhtSensor(pin=6, name="dht"))
+    # 温湿度: G6 (DHT11)
+    hub.register(DhtSensor(pin=6, sensor_type="DHT11", name="dht"))
 
     # BMP280 气压: I2C
     hub.register(Bmp280Sensor(name="bmp280"))

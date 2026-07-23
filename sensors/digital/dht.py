@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""温湿度传感器 DHT11/DHT22"""
+"""温湿度传感器 DHT11/DHT22 - 基于 adafruit_dht"""
 
+import time
 from sensors.base import BaseSensor
 
 try:
-    import adafruit_dht
     import board
+    import adafruit_dht
     HAS_DHT = True
 except ImportError:
     HAS_DHT = False
@@ -15,9 +16,15 @@ except ImportError:
 class DhtSensor(BaseSensor):
     """温湿度传感器"""
 
-    def __init__(self, pin: int = 6, name: str = "dht"):
-        super().__init__(name=name, sensor_type="digital", pin_config={"pin": pin})
+    def __init__(self, pin: int = 6, sensor_type: str = "DHT11", name: str = "dht"):
+        """
+        Args:
+            pin: GPIO引脚号
+            sensor_type: "DHT11" 或 "DHT22"
+        """
+        super().__init__(name=name, sensor_type="digital", pin_config={"pin": pin, "sensor_type": sensor_type})
         self.pin = pin
+        self.sensor_type_str = sensor_type
         self._sensor = None
 
     def _get_board_pin(self):
@@ -38,7 +45,11 @@ class DhtSensor(BaseSensor):
             self._initialized = True
             return True
         try:
-            self._sensor = adafruit_dht.DHT22(self._get_board_pin())
+            pin = self._get_board_pin()
+            if self.sensor_type_str.upper() == "DHT22":
+                self._sensor = adafruit_dht.DHT22(pin)
+            else:
+                self._sensor = adafruit_dht.DHT11(pin)
             self._initialized = True
             return True
         except Exception as e:
@@ -50,17 +61,25 @@ class DhtSensor(BaseSensor):
             try:
                 temp = self._sensor.temperature
                 hum = self._sensor.humidity
-                return {
-                    "temperature": round(temp, 2) if temp else None,
-                    "humidity": round(hum, 2) if hum else None,
-                    "unit_temp": "C",
-                    "unit_hum": "%"
-                }
+                if temp is not None and hum is not None:
+                    return {
+                        "temperature": round(temp, 2),
+                        "humidity": round(hum, 2),
+                        "unit_temp": "C",
+                        "unit_hum": "%"
+                    }
+                else:
+                    return {"temperature": None, "humidity": None, "error": "No data"}
+            except RuntimeError as e:
+                return {"error": str(e)}
             except Exception as e:
                 return {"error": str(e)}
-        return {"temperature": 0, "humidity": 0}
+        return {"temperature": None, "humidity": None}
 
     def cleanup(self):
         if self._sensor:
-            self._sensor.exit()
+            try:
+                self._sensor.exit()
+            except:
+                pass
         super().cleanup()
