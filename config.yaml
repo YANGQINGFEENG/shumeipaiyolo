@@ -1,20 +1,35 @@
 # 树莓派YOLO传感器项目配置
 # Raspberry Pi YOLO Sensor Project Configuration
 
-# 引脚分配
+# 引脚分配 (根据实际硬件接线)
 pins:
-  # 数字传感器
-  digital:
-    led:
-      red: 17
-      green: 18
-      blue: 27
-    buzzer:
-      pin: 22
-    relay:
-      pin: 23
-    button:
-      pin: 24
+  # RGB-LED 模块 (共阴)
+  rgb_led:
+    red: 19      # R_G19
+    green: 17    # G_G17
+    blue: 27     # B_G27
+
+  # 继电器模块
+  relay:
+    pin: 16      # G16
+
+  # 激光模块
+  laser:
+    pin: 13      # G13
+
+  # 振动开关传感器
+  vibration:
+    pin: 12      # G12
+
+  # 温湿度传感器 (DHT11/DHT22)
+  dht:
+    pin: 6       # G6
+
+  # BMP280 气压模块 (I2C)
+  bmp280:
+    scl: "SCL"   # SCL_SCL
+    sda: "SDA"   # SDA_SDA
+    address: 0x76
 
   # 超声波传感器
   ultrasonic:
@@ -27,11 +42,10 @@ pins:
 
   # I2C 设备地址
   i2c:
-    lcd1602: 0x27
     bmp280: 0x76
     mpu6050: 0x68
     ds1307: 0x68
-    max30102: 0x57
+    lcd1602: 0x27
 
   # PIR 人体感应
   pir:

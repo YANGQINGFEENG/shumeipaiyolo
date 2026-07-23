@@ -1,50 +1,48 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""LED传感器 - 基于 gpiozero.PWMLED"""
+"""继电器模块"""
 
 from sensors.base import BaseSensor
 
 try:
-    from gpiozero import PWMLED
+    from gpiozero import OutputDevice
     HAS_GPIO = True
 except ImportError:
     HAS_GPIO = False
 
 
-class LedSensor(BaseSensor):
-    """PWM LED控制"""
+class RelaySensor(BaseSensor):
+    """继电器模块"""
 
-    def __init__(self, pin: int = 17, name: str = "led"):
+    def __init__(self, pin: int = 16, name: str = "relay"):
         super().__init__(name=name, sensor_type="digital", pin_config={"pin": pin})
         self.pin = pin
-        self._led = None
+        self._relay = None
 
     def initialize(self) -> bool:
         if not HAS_GPIO:
             self._initialized = True
             return True
         try:
-            self._led = PWMLED(self.pin)
+            self._relay = OutputDevice(self.pin)
             self._initialized = True
             return True
         except Exception as e:
-            print(f"[LED] Init error: {e}")
+            print(f"[Relay] Init error: {e}")
             return False
 
     def read_raw(self) -> dict:
-        return {"pin": self.pin, "brightness": self._led.value if self._led else 0}
-
-    def set_brightness(self, value: float):
-        if self._led:
-            self._led.value = max(0.0, min(1.0, value))
+        return {"pin": self.pin, "active": self._relay.is_active if self._relay else False}
 
     def on(self):
-        self.set_brightness(1.0)
+        if self._relay:
+            self._relay.on()
 
     def off(self):
-        self.set_brightness(0.0)
+        if self._relay:
+            self._relay.off()
 
     def cleanup(self):
-        if self._led:
-            self._led.close()
+        if self._relay:
+            self._relay.close()
         super().cleanup()
