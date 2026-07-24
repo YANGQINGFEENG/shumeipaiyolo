@@ -17,6 +17,9 @@ class UploadService:
     def __init__(self, config: Dict[str, Any], cache_service=None):
         self.server_url = config.get("server_url", "http://192.168.1.22:3000")
         self.gateway_id = config.get("gateway_id", 1)
+        self.gateway_ip = config.get("gateway_ip", "192.168.1.63")
+        self.gateway_type = config.get("gateway_type", "wifi_sensor")
+        self.mac = config.get("mac", "AA:BB:CC:DD:EE:FF")
         self.farm_id = config.get("farm_id", 1)
         self.timeout = config.get("timeout", 10)
         self.max_retries = config.get("max_retries", 3)
@@ -88,6 +91,9 @@ class UploadService:
 
         payload = {
             "gateway_id": self.gateway_id,
+            "gateway_ip": self.gateway_ip,
+            "gateway_type": self.gateway_type,
+            "mac": self.mac,
             "farm_id": self.farm_id,
             "nodes": nodes
         }
