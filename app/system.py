@@ -115,6 +115,8 @@ class System:
         for sensor_id, sensor in self.sensors.items():
             try:
                 data = sensor.read()
+                logger.debug(f"Sensor {sensor_id} raw data: {data}")
+
                 if data and data.get("value") is not None:
                     value = data.get("value")
 
@@ -127,13 +129,17 @@ class System:
                             node_id = mapping.get("node_id", f"{sensor_id}_{key}")
                             api_type = mapping.get("type", key)
                             name = mapping.get("name", f"{sensor.name}_{key}")
+                            unit = data.get("unit", {})
+                            if isinstance(unit, dict):
+                                unit = unit.get(key, "")
 
+                            logger.debug(f"Mapped: {sensor_id}_{key} -> node_id={node_id}, type={api_type}")
                             nodes.append({
                                 "node_id": node_id,
                                 "type": api_type,
                                 "name": name,
                                 "value": val,
-                                "unit": data.get("unit", {}).get(key, "")
+                                "unit": unit
                             })
                     else:
                         # 单值传感器
@@ -141,13 +147,15 @@ class System:
                         node_id = mapping.get("node_id", sensor_id)
                         api_type = mapping.get("type", sensor.sensor_type)
                         name = mapping.get("name", sensor.name)
+                        unit = data.get("unit", "")
 
+                        logger.debug(f"Mapped: {sensor_id} -> node_id={node_id}, type={api_type}")
                         nodes.append({
                             "node_id": node_id,
                             "type": api_type,
                             "name": name,
                             "value": value,
-                            "unit": data.get("unit", "")
+                            "unit": unit
                         })
             except Exception as e:
                 logger.error(f"Sensor {sensor_id} read error: {e}")
@@ -162,6 +170,7 @@ class System:
                 name = mapping.get("name", actuator.name)
                 state = actuator._state.value if hasattr(actuator._state, 'value') else "off"
 
+                logger.debug(f"Mapped actuator: {actuator_id} -> node_id={node_id}, type={api_type}, state={state}")
                 nodes.append({
                     "node_id": node_id,
                     "type": api_type,

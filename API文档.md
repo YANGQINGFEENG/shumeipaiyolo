@@ -365,7 +365,23 @@
           "sensor_type": "soil_moisture",
           "location": "1号温室入口",
           "status": "online",
-          "last_update": "2026-06-23T15:30:00Z"
+          "last_update": "2026-06-23T15:30:00Z",
+          "value": 65.5,
+          "unit": "%",
+          "battery": 85,
+          "signal_strength": 78
+        },
+        {
+          "id": 2,
+          "node_id": "WP-1-AB35",
+          "name": "1号水泵",
+          "node_type": "actuator",
+          "sensor_type": "water_pump",
+          "location": "泵房A区",
+          "status": "online",
+          "last_update": "2026-06-23T15:30:00Z",
+          "state": "on",
+          "mode": "auto"
         }
       ]
     }
@@ -373,6 +389,25 @@
   "total": 1
 }
 ```
+
+**设备节点字段说明**：
+
+| 字段 | 类型 | 说明 | 适用类别 |
+|------|------|------|----------|
+| id | number | 节点ID | 全部 |
+| node_id | string | 设备唯一标识 | 全部 |
+| name | string | 设备名称 | 全部 |
+| node_type | string | 设备类别：sensor/actuator | 全部 |
+| sensor_type | string | 设备类型标识 | 全部 |
+| location | string | 安装位置 | 全部 |
+| status | string | 在线状态：online/offline | 全部 |
+| last_update | string | 最后更新时间 | 全部 |
+| value | number | 当前数值 | 传感器 |
+| unit | string | 单位 | 传感器 |
+| battery | number | 电量（0-100） | 传感器 |
+| signal_strength | number | 信号强度（0-100） | 传感器 |
+| state | string | 开关状态：on/off | 执行器 |
+| mode | string | 控制模式：auto/manual | 执行器 |
 
 ### 7.2 创建网关
 
