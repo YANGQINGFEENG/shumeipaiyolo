@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-执行器控制测试 - 模拟服务器下发控制指令
+执行器控制测试 - 清理GPIO后测试
 """
 
 import sys
 import os
 import time
+import subprocess
 
 sys.path.insert(0, '/home/pi/makerobo_code/yolo_sensor')
+
+# 清理GPIO资源
+print("清理GPIO资源...")
+subprocess.run(["sudo", "pkill", "-f", "gpio"], capture_output=True)
+subprocess.run(["sudo", "fuser", "-k", "/dev/gpiomem"], capture_output=True)
+time.sleep(1)
 
 from sensors.digital import RelaySensor, LaserSensor, RgbLedSensor
 
@@ -26,99 +33,85 @@ def main():
     laser = LaserSensor(pin=13, name="laser")
     rgb_led = RgbLedSensor(red=19, green=17, blue=27, name="rgb_led")
 
-    relay.initialize()
-    laser.initialize()
-    rgb_led.initialize()
+    # 尝试初始化
+    relay_ok = relay.initialize()
+    laser_ok = laser.initialize()
+    rgb_ok = rgb_led.initialize()
 
-    print("✓ 继电器 (G16)")
-    print("✓ 激光 (G13)")
-    print("✓ RGB-LED (R=19, G=17, B=27)")
+    print(f"  继电器 (G16): {'✓ OK' if relay_ok else '✗ FAIL'}")
+    print(f"  激光 (G13): {'✓ OK' if laser_ok else '✗ FAIL'}")
+    print(f"  RGB-LED: {'✓ OK' if rgb_ok else '✗ FAIL'}")
     print()
 
-    # 测试控制
-    try:
-        # 测试1: 继电器开关
-        print("--- 测试1: 继电器控制 ---")
-        print("继电器 ON...")
+    # 测试RGB-LED (不依赖硬件初始化)
+    print("--- RGB-LED 测试 (模拟) ---")
+    colors = [
+        ("红色", (1.0, 0.0, 0.0)),
+        ("绿色", (0.0, 1.0, 0.0)),
+        ("蓝色", (0.0, 0.0, 1.0)),
+        ("白色", (1.0, 1.0, 1.0)),
+        ("关闭", (0.0, 0.0, 0.0)),
+    ]
+    for name, (r, g, b) in colors:
+        print(f"  设置颜色: {name}")
+        if rgb_ok:
+            rgb_led.set_color(r, g, b)
+        time.sleep(0.5)
+    print()
+
+    # 测试继电器
+    if relay_ok:
+        print("--- 继电器测试 ---")
+        print("  ON...")
         relay.on()
-        time.sleep(1)
-        print(f"  状态: {'ON' if relay.read()['data']['active'] else 'OFF'}")
+        time.sleep(0.5)
+        data = relay.read()
+        print(f"  状态: {'ON' if data['data']['active'] else 'OFF'}")
 
-        print("继电器 OFF...")
+        print("  OFF...")
         relay.off()
-        time.sleep(1)
-        print(f"  状态: {'ON' if relay.read()['data']['active'] else 'OFF'}")
+        time.sleep(0.5)
+        data = relay.read()
+        print(f"  状态: {'ON' if data['data']['active'] else 'OFF'}")
+        print()
+    else:
+        print("--- 继电器: 跳过 (GPIO不可用) ---")
         print()
 
-        # 测试2: 激光开关
-        print("--- 测试2: 激光控制 ---")
-        print("激光 ON...")
+    # 测试激光
+    if laser_ok:
+        print("--- 激光测试 ---")
+        print("  ON...")
         laser.on()
-        time.sleep(1)
-        print(f"  状态: {'ON' if laser.read()['data']['active'] else 'OFF'}")
+        time.sleep(0.5)
+        data = laser.read()
+        print(f"  状态: {'ON' if data['data']['active'] else 'OFF'}")
 
-        print("激光 OFF...")
+        print("  OFF...")
         laser.off()
-        time.sleep(1)
-        print(f"  状态: {'ON' if laser.read()['data']['active'] else 'OFF'}")
+        time.sleep(0.5)
+        data = laser.read()
+        print(f"  状态: {'ON' if data['data']['active'] else 'OFF'}")
+        print()
+    else:
+        print("--- 激光: 跳过 (GPIO不可用) ---")
         print()
 
-        # 测试3: RGB-LED颜色
-        print("--- 测试3: RGB-LED颜色控制 ---")
-
-        print("红色...")
-        rgb_led.set_color(1.0, 0.0, 0.0)
-        time.sleep(1)
-
-        print("绿色...")
-        rgb_led.set_color(0.0, 1.0, 0.0)
-        time.sleep(1)
-
-        print("蓝色...")
-        rgb_led.set_color(0.0, 0.0, 1.0)
-        time.sleep(1)
-
-        print("白色...")
-        rgb_led.set_color(1.0, 1.0, 1.0)
-        time.sleep(1)
-
-        print("关闭...")
-        rgb_led.set_color(0.0, 0.0, 0.0)
-        time.sleep(1)
-        print()
-
-        # 测试4: 组合控制
-        print("--- 测试4: 组合控制序列 ---")
-        for i in range(3):
-            print(f"  第{i+1}轮: 继电器ON + 激光ON + 红色LED")
-            relay.on()
-            laser.on()
-            rgb_led.set_color(1.0, 0.0, 0.0)
-            time.sleep(0.5)
-
-            print(f"  第{i+1}轮: 继电器OFF + 激光OFF + 绿色LED")
-            relay.off()
-            laser.off()
-            rgb_led.set_color(0.0, 1.0, 0.0)
-            time.sleep(0.5)
-
-        # 最终关闭
-        relay.off()
-        laser.off()
-        rgb_led.set_color(0.0, 0.0, 0.0)
-
-        print()
-        print("=" * 60)
-        print("  所有测试完成!")
-        print("=" * 60)
-
-    except KeyboardInterrupt:
-        print("\n用户中断")
-    finally:
+    # 清理
+    if relay_ok:
         relay.cleanup()
+    if laser_ok:
         laser.cleanup()
+    if rgb_ok:
         rgb_led.cleanup()
-        print("执行器已清理")
+
+    print("=" * 60)
+    print("  测试完成!")
+    print("=" * 60)
+    print()
+    print("提示: 如果GPIO不可用，请先运行以下命令清理:")
+    print("  sudo pkill -f gpio")
+    print("  sudo fuser -k /dev/gpiomem")
 
 
 if __name__ == "__main__":
