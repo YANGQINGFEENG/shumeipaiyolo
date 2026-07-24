@@ -19,6 +19,8 @@ upload:
   retry_delay: 5
 
 # 设备节点配置 (node_id到API类型的映射)
+# 服务器接受的传感器类型: temperature, humidity, light, soil_moisture, soil_temperature, ph, ec, co2, pm25, water_level, battery
+# 服务器接受的执行器类型: water_pump, fan, heater, valve, light, ventilator, fogger
 device_mapping:
   sensors:
     dht11_temp:
@@ -34,12 +36,12 @@ device_mapping:
       type: "temperature"
       name: "BMP280温度"
     bmp280_pressure:
-      node_id: "PR-1-001"
-      type: "pressure"
+      node_id: "CO-1-001"
+      type: "co2"
       name: "气压传感器"
     vibration:
-      node_id: "V-1-001"
-      type: "vibration"
+      node_id: "B-1-001"
+      type: "battery"
       name: "振动传感器"
   actuators:
     relay:
@@ -47,12 +49,12 @@ device_mapping:
       type: "valve"
       name: "继电器"
     laser:
-      node_id: "LS-1-001"
-      type: "light_supplement"
+      node_id: "LT-1-001"
+      type: "light"
       name: "激光"
     rgb_led:
-      node_id: "LS-1-002"
-      type: "light_supplement"
+      node_id: "LT-1-002"
+      type: "light"
       name: "RGB-LED"
 
 # 缓存配置
