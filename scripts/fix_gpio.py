@@ -16,8 +16,34 @@ def clean_gpio():
     print("=" * 50)
     print()
 
-    # 1. 杀死所有Python进程
-    print("1. 清理Python进程...")
+    # 1. 杀死占用GPIO的Python进程
+    print("1. 查找并杀死占用GPIO的进程...")
+    try:
+        # 查找占用gpiochip0的进程
+        result = subprocess.run(["sudo", "lsof", "/dev/gpiochip0"], 
+                               capture_output=True, text=True, timeout=5)
+        if result.stdout:
+            # 提取PID
+            pids = set()
+            for line in result.stdout.strip().split("\n")[1:]:  # 跳过标题
+                parts = line.split()
+                if len(parts) >= 2:
+                    pids.add(parts[1])
+            
+            for pid in pids:
+                print(f"   杀死进程 PID: {pid}")
+                subprocess.run(["sudo", "kill", "-9", pid], 
+                              capture_output=True, timeout=5)
+            print(f"   ✓ 已杀死 {len(pids)} 个进程")
+        else:
+            print("   ✓ 未发现占用进程")
+    except Exception as e:
+        print(f"   ✗ 查找失败: {e}")
+
+    time.sleep(1)
+
+    # 2. 杀死所有Python进程
+    print("2. 清理所有Python进程...")
     try:
         subprocess.run(["sudo", "pkill", "-9", "-f", "python3"], 
                        capture_output=True, timeout=5)
@@ -27,8 +53,8 @@ def clean_gpio():
 
     time.sleep(1)
 
-    # 2. 清理libgpiod僵尸进程
-    print("2. 清理libgpiod僵尸进程...")
+    # 3. 清理libgpiod僵尸进程
+    print("3. 清理libgpiod僵尸进程...")
     try:
         subprocess.run(["sudo", "pkill", "-9", "-f", "libgpiod"], 
                        capture_output=True, timeout=5)
@@ -38,8 +64,8 @@ def clean_gpio():
 
     time.sleep(1)
 
-    # 3. 清理gpiomem
-    print("3. 清理gpiomem...")
+    # 4. 清理gpiomem
+    print("4. 清理gpiomem...")
     try:
         result = subprocess.run(["ls", "-la", "/dev/gpiomem*"], 
                                capture_output=True, text=True, timeout=5)
@@ -55,23 +81,19 @@ def clean_gpio():
 
     time.sleep(1)
 
-    # 4. 检查剩余进程
-    print("4. 检查剩余GPIO进程...")
+    # 5. 验证GPIO状态
+    print("5. 验证GPIO状态...")
     try:
-        result = subprocess.run(["ps", "aux"], capture_output=True, text=True, timeout=5)
-        gpio_processes = []
-        for line in result.stdout.split("\n"):
-            if "gpio" in line.lower() or ("python" in line.lower() and "run.py" not in line):
-                gpio_processes.append(line[:80])
-
-        if gpio_processes:
-            print(f"   发现 {len(gpio_processes)} 个相关进程:")
-            for p in gpio_processes[:5]:
-                print(f"   - {p}")
+        result = subprocess.run(["sudo", "lsof", "/dev/gpiochip0"], 
+                               capture_output=True, text=True, timeout=5)
+        if result.stdout.strip():
+            print(f"   ⚠ 仍有进程占用GPIO:")
+            for line in result.stdout.strip().split("\n")[:5]:
+                print(f"   {line[:70]}")
         else:
-            print("   ✓ 未发现GPIO占用进程")
+            print("   ✓ GPIO已释放")
     except Exception as e:
-        print(f"   ✗ 检查失败: {e}")
+        print(f"   ✗ 验证失败: {e}")
 
     print()
     print("=" * 50)
