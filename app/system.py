@@ -50,6 +50,7 @@ class System:
         # 线程
         self._threads = []
 
+        print(f"[DEBUG] Device mapping loaded: {self.device_mapping}")
         logger.info("System initialized")
 
     def register_sensor(self, sensor: BaseSensor):
@@ -111,11 +112,12 @@ class System:
         """采集并上传数据"""
         nodes = []
         sensors_mapping = self.device_mapping.get("sensors", {})
+        print(f"[DEBUG] sensors_mapping: {sensors_mapping}")
 
         for sensor_id, sensor in self.sensors.items():
             try:
                 data = sensor.read()
-                logger.debug(f"Sensor {sensor_id} raw data: {data}")
+                print(f"[DEBUG] Sensor {sensor_id} raw data: {data}")
 
                 if data and data.get("value") is not None:
                     value = data.get("value")
@@ -133,7 +135,7 @@ class System:
                             if isinstance(unit, dict):
                                 unit = unit.get(key, "")
 
-                            logger.debug(f"Mapped: {sensor_id}_{key} -> node_id={node_id}, type={api_type}")
+                            print(f"[DEBUG] Mapped: {map_key} -> node_id={node_id}, type={api_type}")
                             nodes.append({
                                 "node_id": node_id,
                                 "type": api_type,
@@ -149,7 +151,7 @@ class System:
                         name = mapping.get("name", sensor.name)
                         unit = data.get("unit", "")
 
-                        logger.debug(f"Mapped: {sensor_id} -> node_id={node_id}, type={api_type}")
+                        print(f"[DEBUG] Mapped: {sensor_id} -> node_id={node_id}, type={api_type}")
                         nodes.append({
                             "node_id": node_id,
                             "type": api_type,
@@ -162,6 +164,7 @@ class System:
 
         # 上传执行器状态
         actuators_mapping = self.device_mapping.get("actuators", {})
+        print(f"[DEBUG] actuators_mapping: {actuators_mapping}")
         for actuator_id, actuator in self.actuators.items():
             try:
                 mapping = actuators_mapping.get(actuator_id, {})
@@ -170,7 +173,7 @@ class System:
                 name = mapping.get("name", actuator.name)
                 state = actuator._state.value if hasattr(actuator._state, 'value') else "off"
 
-                logger.debug(f"Mapped actuator: {actuator_id} -> node_id={node_id}, type={api_type}, state={state}")
+                print(f"[DEBUG] Actuator {actuator_id}: mapping={mapping}, node_id={node_id}, type={api_type}, state={state}")
                 nodes.append({
                     "node_id": node_id,
                     "type": api_type,

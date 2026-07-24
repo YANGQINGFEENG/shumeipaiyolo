@@ -584,26 +584,36 @@
 
 **支持的设备类型**：
 
-| 类型标识 | 名称 | 类别 | 单位 |
-|----------|------|------|------|
-| temperature | 空气温度 | 传感器 | °C |
-| humidity | 空气湿度 | 传感器 | % |
-| light | 光照强度 | 传感器 | Lux |
-| soil_moisture | 土壤湿度 | 传感器 | % |
-| soil_temperature | 土壤温度 | 传感器 | °C |
-| ec | 土壤电导率 | 传感器 | μS/cm |
-| ph | 土壤pH值 | 传感器 | pH |
-| co2 | CO2浓度 | 传感器 | ppm |
-| wind_speed | 风速 | 传感器 | m/s |
-| rainfall | 降雨量 | 传感器 | mm |
-| battery | 电池电压 | 传感器 | V |
-| water_pump | 水泵 | 执行器 | - |
-| fan | 风扇 | 执行器 | - |
-| heater | 加热器 | 执行器 | - |
-| valve | 电磁阀 | 执行器 | - |
-| light_supplement | 补光灯 | 执行器 | - |
-| irrigation | 滴灌系统 | 执行器 | - |
-| ventilation | 通风机 | 执行器 | - |
+### 传感器类型（14种）
+
+| 类型标识 | 名称 | 单位 | 前缀 | 适用传感器 |
+|----------|------|------|------|------------|
+| temperature | 空气温度 | °C | T | DHT11、BMP280、DS18B20 |
+| humidity | 空气湿度 | % | H | DHT11、SHT30、SHT40 |
+| light | 光照强度 | lux | L | BH1750、TSL2561 |
+| soil_moisture | 土壤湿度 | % | SM | FC-28、YL-69 |
+| soil_temperature | 土壤温度 | °C | ST | DS18B20 |
+| ph | 土壤pH值 | pH | P | pH传感器模块 |
+| ec | 土壤电导率 | μS/cm | EC | EC传感器模块 |
+| co2 | CO2浓度 | ppm | C | MH-Z19B、SCD30 |
+| pm25 | PM2.5 | μg/m³ | PM | PMS5003、PMS7003 |
+| water_level | 水位 | cm | WL | 超声波水位传感器 |
+| battery | 电池电量 | % | B | 电压检测模块 |
+| pressure | 气压 | hPa | PR | BMP280、BME280 |
+| vibration | 振动 | mm/s | VB | SW-420振动传感器 |
+| altitude | 海拔 | m | AL | BMP280、BME280 |
+
+### 执行器类型（7种）
+
+| 类型标识 | 名称 | 前缀 | 适用设备 |
+|----------|------|------|----------|
+| water_pump | 水泵 | WP | 直流水泵、蠕动泵 |
+| fan | 风扇 | FN | DC风扇、AC风扇 |
+| heater | 加热器 | HT | 加热棒、加热垫 |
+| valve | 电磁阀 | VL | 继电器、电磁阀模块 |
+| light | 补光灯 | LT | LED补光灯、激光灯 |
+| ventilator | 通风机 | VT | 排风扇、通风机 |
+| fogger | 雾化器 | FG | 雾化喷头、超声波雾化器 |
 
 ---
 
