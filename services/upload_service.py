@@ -5,6 +5,7 @@
 import requests
 import time
 import logging
+import json
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
@@ -111,16 +112,24 @@ class UploadService:
         """带重试的发送"""
         for attempt in range(self.max_retries):
             try:
+                logger.info(f"Upload attempt {attempt + 1}: POST {self.server_url}/api/device/report")
+                logger.info(f"Payload: {json.dumps(payload, ensure_ascii=False)}")
+
                 resp = requests.post(
                     f"{self.server_url}/api/device/report",
                     json=payload,
                     timeout=self.timeout
                 )
+
+                logger.info(f"Response status: {resp.status_code}")
+                logger.info(f"Response body: {resp.text}")
+
                 if resp.status_code in [200, 201]:
                     result = resp.json()
                     logger.info(f"Upload success: {result.get('message', '')}")
                     return True
-                logger.warning(f"Upload failed: {resp.status_code}")
+                else:
+                    logger.error(f"Upload failed: {resp.status_code} - {resp.text}")
             except Exception as e:
                 logger.error(f"Upload error: {e}")
 
