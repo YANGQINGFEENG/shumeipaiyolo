@@ -1,0 +1,24 @@
+# 执行器配置
+actuators:
+  - id: "relay"
+    type: "relay"
+    name: "继电器"
+    enabled: true
+    config:
+      pin: 16
+
+  - id: "laser"
+    type: "laser"
+    name: "激光"
+    enabled: true
+    config:
+      pin: 13
+
+  - id: "rgb_led"
+    type: "rgb_led"
+    name: "RGB-LED"
+    enabled: true
+    config:
+      red: 19
+      green: 17
+      blue: 27

@@ -1,0 +1,27 @@
+# 系统配置
+system:
+  name: "smart-farm-pi"
+  version: "1.0.0"
+  log_level: "INFO"
+  log_file: "logs/system.log"
+
+# 上传配置
+upload:
+  server_url: "http://192.168.1.22:3000"
+  gateway_ip: "192.168.1.63"
+  mac: "AA:BB:CC:DD:EE:FF"
+  farm_id: 1
+  interval: 30
+  timeout: 10
+  max_retries: 3
+  retry_delay: 5
+
+# 缓存配置
+cache:
+  db_path: "data/cache.db"
+  max_age_days: 7
+
+# 心跳配置
+heartbeat:
+  enabled: true
+  interval: 30

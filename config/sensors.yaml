@@ -1,0 +1,24 @@
+# 传感器配置
+sensors:
+  - id: "dht11"
+    type: "dht"
+    name: "温湿度传感器"
+    enabled: true
+    config:
+      pin: 6
+      sensor_type: "DHT11"
+
+  - id: "bmp280"
+    type: "bmp280"
+    name: "气压传感器"
+    enabled: true
+    config:
+      address: 0x76
+      sea_level_pressure: 1013.25
+
+  - id: "vibration"
+    type: "vibration"
+    name: "振动传感器"
+    enabled: true
+    config:
+      pin: 12

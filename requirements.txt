@@ -1,24 +1,15 @@
-# 树莓派YOLO传感器项目依赖
-# Raspberry Pi YOLO Sensor Project Dependencies
+# 智慧农业物联网系统依赖
 
 # 核心依赖
-gpiozero>=2.0
-picamera2>=0.3
 pyyaml>=6.0
 requests>=2.28
-websocket-client>=1.5
-flask>=3.0
-
-# YOLO
-ultralytics>=8.1
-opencv-python>=4.8
+gpiozero>=2.0
 
 # 传感器库
-mpu6050-raspberrypi>=1.0
 adafruit-circuitpython-bmp280>=3.2
-smbus2>=0.4
+adafruit-circuitpython-dht>=4.0
 
-# MQTT
+# MQTT (可选)
 paho-mqtt>=1.6
 
 # 测试
