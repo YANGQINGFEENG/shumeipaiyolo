@@ -18,12 +18,13 @@ upload:
   max_retries: 3
   retry_delay: 5
 
-# 设备节点配置 (node_id到API类型的映射)
+# 设备节点配置 (sensor_id_value_key -> API类型的映射)
 # 服务器接受的传感器类型: temperature, humidity, light, soil_moisture, soil_temperature, ph, ec, co2, pm25, water_level, battery
 # 服务器接受的执行器类型: water_pump, fan, heater, valve, light, ventilator, fogger
 device_mapping:
   sensors:
-    dht11_temp:
+    # DHT11: value dict keys are "temperature" and "humidity"
+    dht11_temperature:
       node_id: "T-1-001"
       type: "temperature"
       name: "空气温度传感器"
@@ -31,7 +32,8 @@ device_mapping:
       node_id: "H-1-001"
       type: "humidity"
       name: "空气湿度传感器"
-    bmp280_temp:
+    # BMP280: value dict keys are "temperature" and "pressure"
+    bmp280_temperature:
       node_id: "T-1-002"
       type: "temperature"
       name: "BMP280温度"
@@ -39,6 +41,7 @@ device_mapping:
       node_id: "CO-1-001"
       type: "co2"
       name: "气压传感器"
+    # Vibration: value is boolean
     vibration:
       node_id: "B-1-001"
       type: "battery"
