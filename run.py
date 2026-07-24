@@ -88,12 +88,22 @@ def cmd_start(args):
     from app.system import System
 
     config = ConfigManager()
+
+    # 调试输出
+    print(f"Config dir: {config.config_dir}")
+    print(f"Loaded sensors: {config.get_sensors()}")
+    print(f"Loaded actuators: {config.get_actuators()}")
+
     system = System()
 
     # 加载设备
-    for sensor in load_sensors(config):
+    sensors = load_sensors(config)
+    actuators = load_actuators(config)
+    print(f"Loaded {len(sensors)} sensors, {len(actuators)} actuators")
+
+    for sensor in sensors:
         system.register_sensor(sensor)
-    for actuator in load_actuators(config):
+    for actuator in actuators:
         system.register_actuator(actuator)
 
     system.start()

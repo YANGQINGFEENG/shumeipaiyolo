@@ -1,6 +1,6 @@
 # 智慧农业物联网平台 - API 文档
 
-## 更新日期：2026-06-23
+## 更新日期：2026-07-24
 
 ---
 
@@ -9,14 +9,17 @@
 1. [基地管理API](#1-基地管理api)
 2. [区域管理API](#2-区域管理api)
 3. [传感器API](#3-传感器api)
-4. [执行器API](#4-执行器api)
-5. [设备网关API](#5-设备网关api)
-6. [设备数据上报API](#6-设备数据上报api)
-7. [报警系统API](#7-报警系统api)
-8. [知识库API](#8-知识库api)
-9. [提示词模板API](#9-提示词模板api)
-10. [AI服务API](#10-ai服务api)
-11. [错误处理](#11-错误处理)
+4. [传感器类型API](#4-传感器类型api)
+5. [执行器API](#5-执行器api)
+6. [执行器类型API](#6-执行器类型api)
+7. [设备网关API](#7-设备网关api)
+8. [设备数据上报API](#8-设备数据上报api)
+9. [报警系统API](#9-报警系统api)
+10. [知识库API](#10-知识库api)
+11. [提示词模板API](#11-提示词模板api)
+12. [AI服务API](#12-ai服务api)
+13. [错误处理](#13-错误处理)
+14. [设备编号规则](#14-设备编号规则)
 
 ---
 
@@ -187,9 +190,61 @@
 
 ---
 
-## 4. 执行器API
+## 4. 传感器类型API
 
-### 4.1 获取执行器列表
+### 4.1 获取传感器类型列表
+
+**接口地址**：`GET /api/sensor-types`
+
+**响应示例**：
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "type": "temperature",
+      "name": "空气温度",
+      "unit": "°C",
+      "created_at": "2026-06-23T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "type": "humidity",
+      "name": "空气湿度",
+      "unit": "%",
+      "created_at": "2026-06-23T10:00:00Z"
+    }
+  ],
+  "total": 11
+}
+```
+
+### 4.2 创建传感器类型
+
+**接口地址**：`POST /api/sensor-types`
+
+**请求体**：
+```json
+{
+  "type": "soil_temperature",
+  "name": "土壤温度",
+  "unit": "°C",
+  "description": "监测土壤温度"
+}
+```
+
+### 4.3 删除传感器类型
+
+**接口地址**：`DELETE /api/sensor-types/[id]`
+
+**说明**：如果该类型下存在传感器，将返回400错误。
+
+---
+
+## 5. 执行器API
+
+### 5.1 获取执行器列表
 
 **接口地址**：`GET /api/actuators`
 
@@ -199,7 +254,7 @@
 | type | string | 否 | 按类型筛选（water_pump/fan/heater等） |
 | farm_id | number | 否 | 按基地筛选 |
 
-### 4.2 更新执行器状态
+### 5.2 更新执行器状态
 
 **接口地址**：`PATCH /api/actuators/[id]`
 
@@ -212,7 +267,7 @@
 }
 ```
 
-### 4.3 发送控制指令
+### 5.3 发送控制指令
 
 **接口地址**：`POST /api/actuators/[id]/commands`
 
@@ -225,9 +280,60 @@
 
 ---
 
-## 5. 设备网关API
+## 6. 执行器类型API
 
-### 5.1 获取网关列表
+### 6.1 获取执行器类型列表
+
+**接口地址**：`GET /api/actuator-types`
+
+**响应示例**：
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "type": "water_pump",
+      "name": "水泵",
+      "description": "用于灌溉和排水控制",
+      "created_at": "2026-06-23T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "type": "fan",
+      "name": "风扇",
+      "description": "用于通风和降温",
+      "created_at": "2026-06-23T10:00:00Z"
+    }
+  ],
+  "total": 7
+}
+```
+
+### 6.2 创建执行器类型
+
+**接口地址**：`POST /api/actuator-types`
+
+**请求体**：
+```json
+{
+  "type": "valve",
+  "name": "电磁阀",
+  "description": "用于控制水流开关"
+}
+```
+
+### 6.3 删除执行器类型
+
+**接口地址**：`DELETE /api/actuator-types/[id]`
+
+**说明**：如果该类型下存在执行器，将返回400错误。
+
+---
+
+## 7. 设备网关API
+
+### 7.1 获取网关列表
 
 **接口地址**：`GET /api/gateways`
 
@@ -253,9 +359,10 @@
       "nodes": [
         {
           "id": 1,
-          "node_id": "sensor_001",
-          "name": "温度传感器1",
-          "sensor_type": "temperature",
+          "node_id": "SM-1-AB34",
+          "name": "土壤湿度传感器1",
+          "node_type": "sensor",
+          "sensor_type": "soil_moisture",
           "location": "1号温室入口",
           "status": "online",
           "last_update": "2026-06-23T15:30:00Z"
@@ -267,7 +374,7 @@
 }
 ```
 
-### 5.2 创建网关
+### 7.2 创建网关
 
 **接口地址**：`POST /api/gateways`
 
@@ -283,41 +390,129 @@
 }
 ```
 
-### 5.3 删除网关
+### 7.3 删除网关
 
 **接口地址**：`DELETE /api/gateways/[id]`
 
 ---
 
-## 6. 设备数据上报API
+## 8. 设备数据上报API
 
-### 6.1 设备数据上报
+### 8.1 设备数据上报（统一协议）
 
 **接口地址**：`POST /api/device/report`
 
-**场景1：WiFi直连传感器**
+**适用场景**：
+- WiFi直连传感器独立上报
+- 网关聚合多个设备节点上报
+- 执行器状态上报
+
+**请求体结构**：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| gateway_id | number | ✅ | 网关ID（首次上报可为0） |
+| farm_id | number | ✅ | 基地ID |
+| nodes | array | ✅ | 设备节点数据数组 |
+
+**nodes数组元素结构**：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| node_id | string | ✅ | 设备节点唯一标识（MAC地址或序列号） |
+| type | string | ✅ | 设备类型（见设备类型字典） |
+| name | string | ❌ | 设备名称 |
+| value | number | ❌ | 传感器数值（传感器类型必填） |
+| unit | string | ❌ | 单位 |
+| state | string | ❌ | 执行器状态：on/off（执行器类型必填） |
+| mode | string | ❌ | 控制模式：auto/manual |
+| location | string | ❌ | 安装位置 |
+| firmware_version | string | ❌ | 固件版本号 |
+| signal_strength | number | ❌ | 信号强度（0-100） |
+| battery_level | number | ❌ | 电池电量（0-100） |
+
+**场景1：传感器数据上报**
+
 ```json
 {
-  "gateway_ip": "192.168.1.101",
-  "gateway_type": "wifi_sensor",
-  "mac": "AA:BB:CC:DD:EE:FF",
+  "gateway_id": 1,
   "farm_id": 1,
-  "data": [
-    {"type": "temperature", "value": 25.5, "unit": "°C"}
+  "nodes": [
+    {
+      "node_id": "AA:BB:CC:DD:EE:01",
+      "type": "temperature",
+      "name": "空气温度传感器1",
+      "value": 25.5,
+      "unit": "°C",
+      "location": "1号温室",
+      "firmware_version": "v1.2.0",
+      "signal_strength": 85,
+      "battery_level": 92
+    },
+    {
+      "node_id": "AA:BB:CC:DD:EE:02",
+      "type": "soil_moisture",
+      "name": "土壤湿度传感器1",
+      "value": 65.2,
+      "unit": "%",
+      "location": "1号温室北侧"
+    }
   ]
 }
 ```
 
-**场景2：网关聚合上报**
+**场景2：执行器状态上报**
+
 ```json
 {
-  "gateway_ip": "192.168.1.100",
-  "gateway_type": "lorawan_gateway",
-  "mac": "11:22:33:44:55:66",
+  "gateway_id": 1,
   "farm_id": 1,
   "nodes": [
-    {"node_id": "sensor_001", "type": "temperature", "value": 24.5, "unit": "°C"},
-    {"node_id": "sensor_002", "type": "humidity", "value": 65.0, "unit": "%"}
+    {
+      "node_id": "WP-001",
+      "type": "water_pump",
+      "name": "1号水泵",
+      "state": "on",
+      "mode": "auto",
+      "location": "泵房A区"
+    },
+    {
+      "node_id": "FN-001",
+      "type": "fan",
+      "name": "温室风扇1",
+      "state": "off",
+      "mode": "manual",
+      "location": "1号温室"
+    }
+  ]
+}
+```
+
+**场景3：网关聚合上报（混合传感器和执行器）**
+
+```json
+{
+  "gateway_id": 1,
+  "farm_id": 1,
+  "nodes": [
+    {
+      "node_id": "sensor_001",
+      "type": "temperature",
+      "value": 24.5,
+      "unit": "°C"
+    },
+    {
+      "node_id": "sensor_002",
+      "type": "humidity",
+      "value": 65.0,
+      "unit": "%"
+    },
+    {
+      "node_id": "actuator_001",
+      "type": "water_pump",
+      "state": "on",
+      "mode": "auto"
+    }
   ]
 }
 ```
@@ -327,24 +522,63 @@
 {
   "success": true,
   "message": "数据上报成功",
+  "processed_nodes": [
+    {
+      "node_id": "AA:BB:CC:DD:EE:01",
+      "type": "temperature",
+      "device_id": "T-1-01",
+      "action": "created"
+    },
+    {
+      "node_id": "AA:BB:CC:DD:EE:02",
+      "type": "soil_moisture",
+      "device_id": "SM-1-02",
+      "action": "updated"
+    }
+  ],
   "gateway_id": 1
 }
 ```
 
 **自动处理逻辑**：
-1. 首次上报 → 自动创建网关和设备节点
-2. 后续上报 → 自动关联到已有设备
-3. 数据存储 → 写入device_data表并同步到sensors表
+1. **设备类型识别**：根据`type`字段自动识别设备类别（传感器/执行器）
+2. **设备自动分类**：传感器数据同步到`sensors`表，执行器数据同步到`actuators`表
+3. **设备自动注册**：首次上报的设备自动创建记录
+4. **ID自动生成**：统一生成格式 `{PREFIX}-{gatewayId}-{nodeId}`
+5. **类型自动创建**：新设备类型自动注册到`sensor_types`或`actuator_types`表
+
+**支持的设备类型**：
+
+| 类型标识 | 名称 | 类别 | 单位 |
+|----------|------|------|------|
+| temperature | 空气温度 | 传感器 | °C |
+| humidity | 空气湿度 | 传感器 | % |
+| light | 光照强度 | 传感器 | Lux |
+| soil_moisture | 土壤湿度 | 传感器 | % |
+| soil_temperature | 土壤温度 | 传感器 | °C |
+| ec | 土壤电导率 | 传感器 | μS/cm |
+| ph | 土壤pH值 | 传感器 | pH |
+| co2 | CO2浓度 | 传感器 | ppm |
+| wind_speed | 风速 | 传感器 | m/s |
+| rainfall | 降雨量 | 传感器 | mm |
+| battery | 电池电压 | 传感器 | V |
+| water_pump | 水泵 | 执行器 | - |
+| fan | 风扇 | 执行器 | - |
+| heater | 加热器 | 执行器 | - |
+| valve | 电磁阀 | 执行器 | - |
+| light_supplement | 补光灯 | 执行器 | - |
+| irrigation | 滴灌系统 | 执行器 | - |
+| ventilation | 通风机 | 执行器 | - |
 
 ---
 
-## 7. 报警系统API
+## 9. 报警系统API
 
-### 7.1 获取报警规则
+### 9.1 获取报警规则
 
 **接口地址**：`GET /api/alarms/rules`
 
-### 7.2 创建报警规则
+### 9.2 创建报警规则
 
 **接口地址**：`POST /api/alarms/rules`
 
@@ -359,7 +593,7 @@
 }
 ```
 
-### 7.3 获取报警记录
+### 9.3 获取报警记录
 
 **接口地址**：`GET /api/alarms/records`
 
@@ -371,7 +605,7 @@
 | page | number | 否 | 页码（默认1） |
 | pageSize | number | 否 | 每页数量（默认20） |
 
-### 7.4 更新报警状态
+### 9.4 更新报警状态
 
 **接口地址**：`PATCH /api/alarms/records`
 
@@ -386,9 +620,9 @@
 
 ---
 
-## 8. 知识库API
+## 10. 知识库API
 
-### 8.1 获取知识列表
+### 10.1 获取知识列表
 
 **接口地址**：`GET /api/knowledge`
 
@@ -400,7 +634,7 @@
 | category | string | 否 | 按分类筛选 |
 | search | string | 否 | 搜索关键词 |
 
-### 8.2 智能添加知识
+### 10.2 智能添加知识
 
 **接口地址**：`POST /api/knowledge/smart-add`
 
@@ -434,7 +668,7 @@
 }
 ```
 
-### 8.3 知识对比分析
+### 10.3 知识对比分析
 
 **接口地址**：`POST /api/knowledge/compare`
 
@@ -472,13 +706,13 @@
 
 ---
 
-## 9. 提示词模板API
+## 11. 提示词模板API
 
-### 9.1 获取模板列表
+### 11.1 获取模板列表
 
 **接口地址**：`GET /api/prompts`
 
-### 9.2 渲染模板
+### 11.2 渲染模板
 
 **接口地址**：`POST /api/prompts/render`
 
@@ -495,29 +729,29 @@
 
 ---
 
-## 10. AI服务API
+## 12. AI服务API
 
-### 10.1 AI聊天
+### 12.1 AI聊天
 
 **接口地址**：`POST /api/ai/chat`
 
-### 10.2 AI诊断
+### 12.2 AI诊断
 
 **接口地址**：`POST /api/ai/diagnosis`
 
-### 10.3 图片识别
+### 12.3 图片识别
 
 **接口地址**：`POST /api/ai/image-recognition`
 
-### 10.4 获取模型列表
+### 12.4 获取模型列表
 
 **接口地址**：`GET /api/ai/models`
 
 ---
 
-## 11. 错误处理
+## 13. 错误处理
 
-### 错误响应格式
+### 13.1 错误响应格式
 
 ```json
 {
@@ -527,7 +761,7 @@
 }
 ```
 
-### 常见错误码
+### 13.2 常见错误码
 
 | HTTP状态码 | 说明 |
 |-----------|------|
@@ -537,14 +771,52 @@
 
 ---
 
-## 12. 设备编号规则
+## 14. 设备编号规则
+
+### 14.1 统一设备ID格式
+
+系统采用统一的设备编号规则，格式如下：
 
 ```
-[基地编码]-[区域编码]-[设备类型]-[序号]
-示例：BJ-001-GH1-S-001（北京001号基地-1号大棚-传感器-001）
+{PREFIX}-{gatewayId}-{nodeId}
 ```
+
+**说明**：
+- **PREFIX**：设备类型前缀（2-3位大写字母）
+- **gatewayId**：网关ID（数字）
+- **nodeId**：节点ID（截取后4位，大写）
+
+**设备类型前缀映射**：
+
+| 前缀 | 设备类型 | 示例 |
+|------|----------|------|
+| T | temperature（空气温度） | T-1-AB34 |
+| H | humidity（空气湿度） | H-1-CD56 |
+| L | light（光照强度） | L-1-EF78 |
+| SM | soil_moisture（土壤湿度） | SM-1-GH90 |
+| ST | soil_temperature（土壤温度） | ST-1-IJ12 |
+| EC | ec（土壤电导率） | EC-1-KL34 |
+| PH | ph（土壤pH值） | PH-1-MN56 |
+| CO | co2（CO2浓度） | CO-1-OP78 |
+| WS | wind_speed（风速） | WS-1-QR90 |
+| RF | rainfall（降雨量） | RF-1-ST12 |
+| B | battery（电池电压） | B-1-UV34 |
+| WP | water_pump（水泵） | WP-1-WX56 |
+| FN | fan（风扇） | FN-1-YZ78 |
+| HT | heater（加热器） | HT-1-AB90 |
+| VL | valve（电磁阀） | VL-1-CD12 |
+| LS | light_supplement（补光灯） | LS-1-EF34 |
+| IR | irrigation（滴灌系统） | IR-1-GH56 |
+| VT | ventilation（通风机） | VT-1-IJ78 |
+
+### 14.2 旧格式兼容
+
+系统兼容以下旧格式，自动转换为新格式：
+- 手动注册格式：`T-001` → 转换为 `T-{gatewayId}-001`
+- 自动发现格式：`DN-gatewayId-nodeId` → 转换为 `{PREFIX}-gatewayId-nodeId`
 
 ---
 
-**文档版本**：v2.0  
-**最后更新**：2026-06-23
+**文档版本**：v2.1  
+**最后更新**：2026-07-24  
+**新增内容**：设备自动分类、统一上报协议、传感器/执行器类型API、统一设备编号规则
