@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 """继电器执行器"""
 
+import subprocess
+import time
 from typing import Dict
 from drivers.actuators.base import BaseActuator, ActuatorState
 
@@ -20,6 +22,17 @@ class RelayActuator(BaseActuator):
         super().__init__(actuator_id, name, "relay", config)
         self.pin = pin
         self._device = None
+        self._retry_count = 3
+        self._retry_delay = 1
+
+    def _cleanup_gpio(self):
+        """清理GPIO资源"""
+        try:
+            subprocess.run(["sudo", "pkill", "-9", "-f", "libgpiod"], 
+                          capture_output=True, timeout=3)
+            time.sleep(0.3)
+        except:
+            pass
 
     def initialize(self) -> bool:
         if not HAS_GPIO:
@@ -27,15 +40,24 @@ class RelayActuator(BaseActuator):
             self._initialized = True
             self._state = ActuatorState.OFF
             return True
-        try:
-            self._device = OutputDevice(self.pin)
-            self._initialized = True
-            self._state = ActuatorState.OFF
-            self.logger.info(f"Relay initialized: pin={self.pin}")
-            return True
-        except Exception as e:
-            self.logger.error(f"Init error: {e}")
-            return False
+
+        for attempt in range(self._retry_count):
+            try:
+                self._cleanup_gpio()
+                time.sleep(0.3)
+                self._device = OutputDevice(self.pin)
+                self._initialized = True
+                self._state = ActuatorState.OFF
+                self.logger.info(f"Relay initialized: pin={self.pin}")
+                return True
+            except Exception as e:
+                self.logger.warning(f"Init attempt {attempt + 1} failed: {e}")
+                if attempt < self._retry_count - 1:
+                    self._cleanup_gpio()
+                    time.sleep(self._retry_delay)
+
+        self.logger.error(f"Relay init failed after {self._retry_count} attempts")
+        return False
 
     def turn_on(self) -> bool:
         if self._device:
@@ -67,5 +89,8 @@ class RelayActuator(BaseActuator):
 
     def cleanup(self):
         if self._device:
-            self._device.close()
+            try:
+                self._device.close()
+            except:
+                pass
         self._initialized = False

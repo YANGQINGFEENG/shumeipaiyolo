@@ -3,6 +3,7 @@
 """DHT11/DHT22 温湿度传感器"""
 
 import time
+import subprocess
 from typing import Any, Dict
 from drivers.sensors.base import BaseSensor, DataQuality
 
@@ -23,6 +24,8 @@ class DHTSensor(BaseSensor):
         self.pin = pin
         self.dht_type = sensor_type
         self._device = None
+        self._retry_count = 3
+        self._retry_delay = 2
 
     def _get_board_pin(self):
         """获取board引脚"""
@@ -37,53 +40,84 @@ class DHTSensor(BaseSensor):
         }
         return pin_map.get(self.pin, board.D6)
 
+    def _cleanup_gpio(self):
+        """清理GPIO资源"""
+        try:
+            subprocess.run(["sudo", "pkill", "-9", "-f", "libgpiod"], 
+                          capture_output=True, timeout=3)
+            time.sleep(0.5)
+        except:
+            pass
+
     def initialize(self) -> bool:
         if not HAS_DHT:
             self.logger.warning("adafruit_dht not available, running in test mode")
             self._initialized = True
             return True
-        try:
-            pin = self._get_board_pin()
-            if self.dht_type.upper() == "DHT22":
-                self._device = adafruit_dht.DHT22(pin)
-            else:
-                self._device = adafruit_dht.DHT11(pin)
-            self._initialized = True
-            self.logger.info(f"DHT initialized: pin={self.pin}, type={self.dht_type}")
-            return True
-        except Exception as e:
-            self.logger.error(f"Init error: {e}")
-            return False
+
+        # 尝试初始化，带重试
+        for attempt in range(self._retry_count):
+            try:
+                # 清理可能的GPIO占用
+                self._cleanup_gpio()
+                time.sleep(0.5)
+
+                pin = self._get_board_pin()
+                if self.dht_type.upper() == "DHT22":
+                    self._device = adafruit_dht.DHT22(pin)
+                else:
+                    self._device = adafruit_dht.DHT11(pin)
+                self._initialized = True
+                self.logger.info(f"DHT initialized: pin={self.pin}, type={self.dht_type}")
+                return True
+            except Exception as e:
+                self.logger.warning(f"Init attempt {attempt + 1} failed: {e}")
+                if attempt < self._retry_count - 1:
+                    self._cleanup_gpio()
+                    time.sleep(self._retry_delay)
+
+        self.logger.error(f"DHT init failed after {self._retry_count} attempts")
+        return False
 
     def read(self) -> Dict[str, Any]:
         if not self._device:
             return {"value": None, "unit": "", "quality": DataQuality.UNAVAILABLE}
 
-        try:
-            temp = self._device.temperature
-            hum = self._device.humidity
+        # 尝试读取，带重试
+        for attempt in range(self._retry_count):
+            try:
+                temp = self._device.temperature
+                hum = self._device.humidity
 
-            if temp is None or hum is None:
+                if temp is None or hum is None:
+                    if attempt < self._retry_count - 1:
+                        time.sleep(1)
+                        continue
+                    return {"value": None, "unit": "", "quality": DataQuality.ERROR}
+
+                # 数据校验
+                if not (-40 <= temp <= 80) or not (0 <= hum <= 100):
+                    return {"value": None, "unit": "", "quality": DataQuality.ERROR}
+
+                self._last_value = {"temperature": round(temp, 2), "humidity": round(hum, 2)}
+                self._last_time = __import__("datetime").datetime.now()
+
+                return {
+                    "value": self._last_value,
+                    "unit": {"temperature": "°C", "humidity": "%"},
+                    "quality": DataQuality.GOOD
+                }
+            except RuntimeError as e:
+                self.logger.warning(f"Read attempt {attempt + 1} failed: {e}")
+                if attempt < self._retry_count - 1:
+                    time.sleep(1)
+                    continue
+                return {"value": None, "unit": "", "quality": DataQuality.ERROR}
+            except Exception as e:
+                self.logger.error(f"Read error: {e}")
                 return {"value": None, "unit": "", "quality": DataQuality.ERROR}
 
-            # 数据校验
-            if not (-40 <= temp <= 80) or not (0 <= hum <= 100):
-                return {"value": None, "unit": "", "quality": DataQuality.ERROR}
-
-            self._last_value = {"temperature": round(temp, 2), "humidity": round(hum, 2)}
-            self._last_time = __import__("datetime").datetime.now()
-
-            return {
-                "value": self._last_value,
-                "unit": {"temperature": "°C", "humidity": "%"},
-                "quality": DataQuality.GOOD
-            }
-        except RuntimeError as e:
-            self.logger.warning(f"Read error: {e}")
-            return {"value": None, "unit": "", "quality": DataQuality.ERROR}
-        except Exception as e:
-            self.logger.error(f"Read error: {e}")
-            return {"value": None, "unit": "", "quality": DataQuality.ERROR}
+        return {"value": None, "unit": "", "quality": DataQuality.ERROR}
 
     def cleanup(self):
         if self._device:
