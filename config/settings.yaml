@@ -38,6 +38,10 @@ device_mapping:
       node_id: "PR-1-001"
       type: "pressure"
       name: "气压传感器"
+    bmp280_altitude:
+      node_id: "AL-1-001"
+      type: "altitude"
+      name: "海拔"
     # Vibration: value is boolean
     vibration:
       node_id: "VB-1-001"

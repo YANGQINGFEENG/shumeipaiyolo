@@ -172,6 +172,8 @@ class System:
                 api_type = mapping.get("type", actuator.actuator_type)
                 name = mapping.get("name", actuator.name)
                 state = actuator._state.value if hasattr(actuator._state, 'value') else "off"
+                if state == "unknown":
+                    state = "off"
 
                 print(f"[DEBUG] Actuator {actuator_id}: mapping={mapping}, node_id={node_id}, type={api_type}, state={state}")
                 nodes.append({
