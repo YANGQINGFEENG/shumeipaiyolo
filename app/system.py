@@ -68,15 +68,29 @@ class System:
         self.running = True
         logger.info("System starting...")
 
-        # 初始化设备
-        for sensor in self.sensors.values():
-            result = sensor.initialize()
-            if not result:
-                logger.warning(f"Sensor {sensor.sensor_id} initialization failed")
+        # 初始化设备 (DHT11最后初始化，避免GPIO冲突)
+        dht_sensor = None
+        for sensor_id, sensor in self.sensors.items():
+            if sensor.sensor_type == "dht":
+                dht_sensor = sensor
+            else:
+                result = sensor.initialize()
+                if not result:
+                    logger.warning(f"Sensor {sensor.sensor_id} initialization failed")
+
+        # 初始化执行器
         for actuator in self.actuators.values():
             result = actuator.initialize()
             if not result:
                 logger.warning(f"Actuator {actuator.actuator_id} initialization failed")
+
+        # 最后初始化DHT11 (避免GPIO冲突)
+        if dht_sensor:
+            import time
+            time.sleep(2)  # 等待其他GPIO设备稳定
+            result = dht_sensor.initialize()
+            if not result:
+                logger.warning(f"DHT11 initialization failed")
 
         # 启动服务线程
         self._start_threads()
