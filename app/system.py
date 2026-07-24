@@ -50,8 +50,8 @@ class System:
         # 线程
         self._threads = []
 
-        print(f"[DEBUG] Device mapping loaded: {self.device_mapping}")
         logger.info("System initialized")
+        logger.info(f"Device mapping loaded: {self.device_mapping}")
 
     def register_sensor(self, sensor: BaseSensor):
         """注册传感器"""
@@ -112,12 +112,26 @@ class System:
         """采集并上传数据"""
         nodes = []
         sensors_mapping = self.device_mapping.get("sensors", {})
-        print(f"[DEBUG] sensors_mapping: {sensors_mapping}")
 
         for sensor_id, sensor in self.sensors.items():
             try:
-                data = sensor.read()
-                print(f"[DEBUG] Sensor {sensor_id} raw data: {data}")
+                # 使用超时读取传感器
+                import threading
+                result = [None]
+                def read_sensor():
+                    result[0] = sensor.read()
+
+                thread = threading.Thread(target=read_sensor)
+                thread.daemon = True
+                thread.start()
+                thread.join(timeout=5)  # 5秒超时
+
+                if thread.is_alive():
+                    logger.debug(f"Sensor {sensor_id} read timeout")
+                    continue
+
+                data = result[0]
+                logger.debug(f"Sensor {sensor_id} raw data: {data}")
 
                 if data and data.get("value") is not None:
                     value = data.get("value")
@@ -135,7 +149,7 @@ class System:
                             if isinstance(unit, dict):
                                 unit = unit.get(key, "")
 
-                            print(f"[DEBUG] Mapped: {map_key} -> node_id={node_id}, type={api_type}")
+                            logger.debug(f"Mapped: {map_key} -> node_id={node_id}, type={api_type}")
                             nodes.append({
                                 "node_id": node_id,
                                 "type": api_type,
@@ -151,7 +165,7 @@ class System:
                         name = mapping.get("name", sensor.name)
                         unit = data.get("unit", "")
 
-                        print(f"[DEBUG] Mapped: {sensor_id} -> node_id={node_id}, type={api_type}")
+                        logger.debug(f"Mapped: {sensor_id} -> node_id={node_id}, type={api_type}")
                         nodes.append({
                             "node_id": node_id,
                             "type": api_type,
@@ -164,7 +178,6 @@ class System:
 
         # 上传执行器状态
         actuators_mapping = self.device_mapping.get("actuators", {})
-        print(f"[DEBUG] actuators_mapping: {actuators_mapping}")
         for actuator_id, actuator in self.actuators.items():
             try:
                 mapping = actuators_mapping.get(actuator_id, {})
@@ -175,7 +188,7 @@ class System:
                 if state == "unknown":
                     state = "off"
 
-                print(f"[DEBUG] Actuator {actuator_id}: mapping={mapping}, node_id={node_id}, type={api_type}, state={state}")
+                logger.debug(f"Actuator {actuator_id}: node_id={node_id}, type={api_type}, state={state}")
                 nodes.append({
                     "node_id": node_id,
                     "type": api_type,
@@ -187,8 +200,11 @@ class System:
                 logger.error(f"Actuator {actuator_id} status error: {e}")
 
         if nodes:
-            self.upload.upload_batch(nodes)
-            logger.info(f"Uploaded {len(nodes)} nodes")
+            try:
+                self.upload.upload_batch(nodes)
+                logger.info(f"Uploaded {len(nodes)} nodes successfully")
+            except Exception as e:
+                logger.error(f"Upload error: {e}")
 
     def _upload_loop(self):
         """上传线程"""
