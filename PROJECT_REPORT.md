@@ -137,12 +137,26 @@
 | 阶段  | 任务     | 状态  | 完成度 |
 | --- | ------ | --- | --- |
 | 1   | 环境搭建   | 已完成 | 100% |
-| 2   | 基础框架   | 已完成 | 100% |
-| 3   | 传感器包   | 部分完成 | 60%  |
-| 4   | 测试框架   | 已完成 | 100% |
+| 2   | 核心框架   | 已完成 | 100% |
+| 3   | 传感器驱动 | 已完成 | 100% |
+| 4   | 执行器驱动 | 已完成 | 100% |
 | 5   | 数据上传   | 已完成 | 100% |
-| 6   | 状态页面   | 已完成 | 100% |
+| 6   | 设备映射   | 已完成 | 100% |
 | 7   | YOLO集成 | 待开始 | 0%  |
+
+## 工作设备状态
+
+| 设备 | node_id | type | 状态 |
+|------|---------|------|------|
+| BMP280温度 | T-17-1002 | temperature | ✓ 正常 |
+| BMP280气压 | PR-17-1001 | pressure | ✓ 正常 |
+| BMP280海拔 | AL-17-1001 | altitude | ✓ 正常 |
+| 振动传感器 | VB-17-1001 | vibration | ✓ 正常 |
+| 继电器 | VL-17-1001 | valve | ✓ 正常 |
+| 激光 | LT-17-1001 | light | ✓ 正常 |
+| RGB-LED | LT-17-1002 | light | ✓ 正常 |
+| DHT11温度 | T-1-001 | temperature | ⚠ GPIO busy |
+| DHT11湿度 | H-1-001 | humidity | ⚠ GPIO busy |
 
 ## Git仓库信息
 
@@ -154,32 +168,38 @@
 ```
 ├── PROJECT_REPORT.md          # 项目报告（实时更新）
 ├── DEV_LOG.md                 # 开发日志
-├── config.yaml                # 统一配置文件
+├── API文档.md                 # 服务器API文档
+├── 设备数据绑定方案.md         # 设备绑定方案
 ├── pi_deploy.py               # 远程部署执行工具
-├── 相关配置列表.md             # 硬件配置清单
-├── .mimocode/                 # AI代理配置
-│   └── rules.md               # 项目规则
-├── sensors/                   # 传感器统一抽象包
-│   ├── base.py                # BaseSensor基类 + SensorHub
-│   ├── digital/               # 数字传感器 (LED, 蜂鸣器, 继电器)
-│   ├── analog/                # 模拟传感器 (光敏, 温度, 声音)
-│   ├── i2c/                   # I2C传感器 (BMP280, MPU6050, LCD1602)
-│   └── special/               # 特殊协议 (超声波, DS18B20, PIR, RFID)
-├── upload/                    # 数据上传模块
-│   ├── http_uploader.py       # HTTP JSON上传
-│   └── mqtt_uploader.py       # MQTT发布
-├── status/                    # 简单状态页面
-│   ├── app.py                 # Flask应用
-│   └── templates/index.html   # 状态页面
-├── tests/                     # pytest测试套件
-│   ├── conftest.py            # 测试fixtures
-│   └── test_sensors.py        # 传感器测试
-├── models/                    # YOLO模型文件
-├── scripts/                   # 脚本工具
+├── run.py                     # 系统启动入口
+├── config/                    # 配置文件
+│   ├── settings.yaml          # 系统配置
+│   ├── sensors.yaml           # 传感器配置
+│   └── actuators.yaml         # 执行器配置
+├── core/                      # 核心框架
+│   ├── event_bus.py           # 事件总线
+│   ├── config_manager.py      # 配置管理
+│   └── logger.py              # 日志管理
+├── drivers/                   # 驱动层
+│   ├── sensors/               # 传感器驱动
+│   │   ├── base.py            # 传感器基类
+│   │   ├── dht.py             # DHT11温湿度
+│   │   ├── bmp280.py          # BMP280气压
+│   │   └── vibration.py       # 振动传感器
+│   └── actuators/             # 执行器驱动
+│       ├── base.py            # 执行器基类
+│       ├── relay.py           # 继电器
+│       ├── laser.py           # 激光
+│       └── rgb_led.py         # RGB-LED
+├── services/                  # 服务层
+│   ├── upload_service.py      # 数据上传服务
+│   ├── cache_service.py       # 本地缓存服务
+│   └── heartbeat_service.py   # 心跳服务
+├── app/                       # 应用层
+│   └── system.py              # 系统主控
 ├── logs/                      # 日志文件
-├── results/                   # 检测结果
+├── data/                      # 数据文件
 ├── 3.程序案例/                # 原有传感器实验代码
-│   └── makerobo_code/         # 41个实验案例
 └── 7.树莓派电子资料/           # 树莓派技术文档
 ```
 
