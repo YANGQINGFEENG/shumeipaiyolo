@@ -116,42 +116,32 @@ class System:
             try:
                 data = sensor.read()
                 if data and data.get("value") is not None:
-                    # 获取设备映射
-                    mapping = sensors_mapping.get(sensor_id, {})
-                    node_id = mapping.get("node_id", sensor_id)
-                    api_type = mapping.get("type", sensor.sensor_type)
-                    name = mapping.get("name", sensor.name)
+                    value = data.get("value")
 
                     # 处理多值传感器 (如DHT11有温度和湿度)
-                    value = data.get("value")
                     if isinstance(value, dict):
                         for key, val in value.items():
-                            if key in ["temperature", "temp"]:
-                                nodes.append({
-                                    "node_id": f"{node_id}_temp",
-                                    "type": "temperature",
-                                    "name": f"{name}温度",
-                                    "value": val,
-                                    "unit": "°C"
-                                })
-                            elif key in ["humidity", "hum"]:
-                                nodes.append({
-                                    "node_id": f"{node_id}_hum",
-                                    "type": "humidity",
-                                    "name": f"{name}湿度",
-                                    "value": val,
-                                    "unit": "%"
-                                })
-                            elif key == "pressure":
-                                nodes.append({
-                                    "node_id": f"{node_id}_press",
-                                    "type": "pressure",
-                                    "name": f"{name}气压",
-                                    "value": val,
-                                    "unit": "hPa"
-                                })
+                            # 根据值的key查找映射
+                            map_key = f"{sensor_id}_{key}"
+                            mapping = sensors_mapping.get(map_key, {})
+                            node_id = mapping.get("node_id", f"{sensor_id}_{key}")
+                            api_type = mapping.get("type", key)
+                            name = mapping.get("name", f"{sensor.name}_{key}")
+
+                            nodes.append({
+                                "node_id": node_id,
+                                "type": api_type,
+                                "name": name,
+                                "value": val,
+                                "unit": data.get("unit", {}).get(key, "")
+                            })
                     else:
                         # 单值传感器
+                        mapping = sensors_mapping.get(sensor_id, {})
+                        node_id = mapping.get("node_id", sensor_id)
+                        api_type = mapping.get("type", sensor.sensor_type)
+                        name = mapping.get("name", sensor.name)
+
                         nodes.append({
                             "node_id": node_id,
                             "type": api_type,
