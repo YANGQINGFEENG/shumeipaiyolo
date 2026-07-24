@@ -70,9 +70,13 @@ class System:
 
         # 初始化设备
         for sensor in self.sensors.values():
-            sensor.initialize()
+            result = sensor.initialize()
+            if not result:
+                logger.warning(f"Sensor {sensor.sensor_id} initialization failed")
         for actuator in self.actuators.values():
-            actuator.initialize()
+            result = actuator.initialize()
+            if not result:
+                logger.warning(f"Actuator {actuator.actuator_id} initialization failed")
 
         # 启动服务线程
         self._start_threads()
@@ -124,14 +128,15 @@ class System:
                 thread = threading.Thread(target=read_sensor)
                 thread.daemon = True
                 thread.start()
-                thread.join(timeout=5)  # 5秒超时
+                thread.join(timeout=10)  # 10秒超时
 
                 if thread.is_alive():
-                    logger.debug(f"Sensor {sensor_id} read timeout")
+                    logger.warning(f"Sensor {sensor_id} read timeout (10s)")
                     continue
 
                 data = result[0]
-                logger.debug(f"Sensor {sensor_id} raw data: {data}")
+                if data:
+                    logger.info(f"Sensor {sensor_id}: {data.get('value', 'N/A')}")
 
                 if data and data.get("value") is not None:
                     value = data.get("value")
