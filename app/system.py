@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""系统主控"""
+"""系统主控 - 匹配新API格式"""
 
 import time
 import signal
@@ -44,6 +44,9 @@ class System:
         self.sensors: Dict[str, BaseSensor] = {}
         self.actuators: Dict[str, BaseActuator] = {}
 
+        # 设备映射 (sensor_id -> node_id)
+        self.device_mapping = self.config.get("device_mapping", {})
+
         # 线程
         self._threads = []
 
@@ -82,12 +85,10 @@ class System:
 
     def _start_threads(self):
         """启动后台线程"""
-        # 上传线程
         upload_thread = threading.Thread(target=self._upload_loop, daemon=True)
         upload_thread.start()
         self._threads.append(upload_thread)
 
-        # 心跳线程
         heartbeat_thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
         heartbeat_thread.start()
         self._threads.append(heartbeat_thread)
@@ -100,7 +101,6 @@ class System:
         while self.running:
             current_time = time.time()
 
-            # 采集数据
             if current_time - last_upload >= upload_interval:
                 self._collect_and_upload()
                 last_upload = current_time
@@ -109,22 +109,82 @@ class System:
 
     def _collect_and_upload(self):
         """采集并上传数据"""
-        readings = []
+        nodes = []
+        sensors_mapping = self.device_mapping.get("sensors", {})
 
         for sensor_id, sensor in self.sensors.items():
             try:
                 data = sensor.read()
                 if data and data.get("value") is not None:
-                    readings.append({
-                        "type": sensor_id,
-                        "value": data.get("value"),
-                        "unit": data.get("unit", "")
-                    })
+                    # 获取设备映射
+                    mapping = sensors_mapping.get(sensor_id, {})
+                    node_id = mapping.get("node_id", sensor_id)
+                    api_type = mapping.get("type", sensor.sensor_type)
+                    name = mapping.get("name", sensor.name)
+
+                    # 处理多值传感器 (如DHT11有温度和湿度)
+                    value = data.get("value")
+                    if isinstance(value, dict):
+                        for key, val in value.items():
+                            if key in ["temperature", "temp"]:
+                                nodes.append({
+                                    "node_id": f"{node_id}_temp",
+                                    "type": "temperature",
+                                    "name": f"{name}温度",
+                                    "value": val,
+                                    "unit": "°C"
+                                })
+                            elif key in ["humidity", "hum"]:
+                                nodes.append({
+                                    "node_id": f"{node_id}_hum",
+                                    "type": "humidity",
+                                    "name": f"{name}湿度",
+                                    "value": val,
+                                    "unit": "%"
+                                })
+                            elif key == "pressure":
+                                nodes.append({
+                                    "node_id": f"{node_id}_press",
+                                    "type": "pressure",
+                                    "name": f"{name}气压",
+                                    "value": val,
+                                    "unit": "hPa"
+                                })
+                    else:
+                        # 单值传感器
+                        nodes.append({
+                            "node_id": node_id,
+                            "type": api_type,
+                            "name": name,
+                            "value": value,
+                            "unit": data.get("unit", "")
+                        })
             except Exception as e:
                 logger.error(f"Sensor {sensor_id} read error: {e}")
 
-        if readings:
-            self.upload.upload_batch(readings)
+        # 上传执行器状态
+        actuators_mapping = self.device_mapping.get("actuators", {})
+        for actuator_id, actuator in self.actuators.items():
+            try:
+                mapping = actuators_mapping.get(actuator_id, {})
+                node_id = mapping.get("node_id", actuator_id)
+                api_type = mapping.get("type", actuator.actuator_type)
+                name = mapping.get("name", actuator.name)
+                state = actuator._state.value if hasattr(actuator._state, 'value') else "off"
+
+                nodes.append({
+                    "node_id": node_id,
+                    "type": api_type,
+                    "name": name,
+                    "state": state,
+                    "mode": "auto"
+                })
+            except Exception as e:
+                logger.error(f"Actuator {actuator_id} status error: {e}")
+
+        if nodes:
+            self.upload.upload_batch(nodes)
+            logger.info(f"Uploaded {len(nodes)} nodes")
 
     def _upload_loop(self):
         """上传线程"""

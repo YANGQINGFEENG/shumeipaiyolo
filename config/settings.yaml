@@ -5,16 +5,52 @@ system:
   log_level: "INFO"
   log_file: "logs/system.log"
 
-# 上传配置
+# 上传配置 (匹配新API格式)
 upload:
   server_url: "http://192.168.1.22:3000"
-  gateway_ip: "192.168.1.63"
-  mac: "AA:BB:CC:DD:EE:FF"
+  gateway_id: 1
   farm_id: 1
   interval: 30
   timeout: 10
   max_retries: 3
   retry_delay: 5
+
+# 设备节点配置 (node_id到API类型的映射)
+device_mapping:
+  sensors:
+    dht11_temp:
+      node_id: "T-1-001"
+      type: "temperature"
+      name: "空气温度传感器"
+    dht11_humidity:
+      node_id: "H-1-001"
+      type: "humidity"
+      name: "空气湿度传感器"
+    bmp280_temp:
+      node_id: "T-1-002"
+      type: "temperature"
+      name: "BMP280温度"
+    bmp280_pressure:
+      node_id: "PR-1-001"
+      type: "pressure"
+      name: "气压传感器"
+    vibration:
+      node_id: "V-1-001"
+      type: "vibration"
+      name: "振动传感器"
+  actuators:
+    relay:
+      node_id: "VL-1-001"
+      type: "valve"
+      name: "继电器"
+    laser:
+      node_id: "LS-1-001"
+      type: "light_supplement"
+      name: "激光"
+    rgb_led:
+      node_id: "LS-1-002"
+      type: "light_supplement"
+      name: "RGB-LED"
 
 # 缓存配置
 cache:
