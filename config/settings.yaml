@@ -35,13 +35,13 @@ device_mapping:
       type: "temperature"
       name: "BMP280温度"
     bmp280_pressure:
-      node_id: "CO-1-001"
-      type: "co2"
+      node_id: "PR-1-001"
+      type: "pressure"
       name: "气压传感器"
     # Vibration: value is boolean
     vibration:
-      node_id: "B-1-001"
-      type: "battery"
+      node_id: "VB-1-001"
+      type: "vibration"
       name: "振动传感器"
   actuators:
     relay:
