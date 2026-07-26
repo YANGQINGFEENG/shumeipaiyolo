@@ -3,13 +3,14 @@
 # 核心依赖
 pyyaml>=6.0
 requests>=2.28
-gpiozero>=2.0
+websocket-client>=1.5
 
 # 传感器库
+gpiozero>=2.0
 adafruit-circuitpython-bmp280>=3.2
 adafruit-circuitpython-dht>=4.0
 
-# MQTT (可选)
+# 网络通信
 paho-mqtt>=1.6
 
 # 测试
