@@ -24,6 +24,7 @@ class HardwareSystem:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.running = False
+        self.logger = logging.getLogger("HardwareSystem")
         
         # 初始化硬件管理器
         gateway_ip = config.get("gateway_ip", "192.168.1.63")
