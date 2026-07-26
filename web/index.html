@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧农业物联网控制平台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 1.1em;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+
+        .status-item {
+            text-align: center;
+        }
+
+        .status-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+
+        .status-label {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        .section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            color: #00d4ff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(180deg, #00d4ff, #00ff88);
+            border-radius: 2px;
+        }
+
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .sensor-card {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .sensor-card:hover {
+            border-color: #00d4ff;
+            transform: translateY(-2px);
+        }
+
+        .sensor-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #00d4ff, #00ff88);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        .sensor-name {
+            font-size: 1.1em;
+            margin-bottom: 8px;
+        }
+
+        .sensor-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+
+        .sensor-unit {
+            font-size: 0.9em;
+            color: #888;
+        }
+
+        .sensor-time {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .actuator-card {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .actuator-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: #333;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            left: 32px;
+        }
+
+        .slider-container {
+            margin-top: 15px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            color: #888;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #00d4ff, #00ff88);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .log-section {
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.85em;
+        }
+
+        .log-entry {
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .log-time {
+            color: #666;
+        }
+
+        .log-message {
+            color: #00d4ff;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            background: rgba(0, 255, 136, 0.1);
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .connection-dot {
+            width: 10px;
+            height: 10px;
+            background: #00ff88;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌾 智慧农业物联网平台</h1>
+            <p class="subtitle">Smart Agriculture IoT Platform</p>
+        </header>
+
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-value" id="sensor-count">5</div>
+                <div class="status-label">传感器</div>
+            </div>
+            <div class="status-item">
+                <div class="status-value" id="actuator-count">3</div>
+                <div class="status-label">执行器</div>
+            </div>
+            <div class="status-item">
+                <div class="status-value" id="data-count">0</div>
+                <div class="status-label">数据点</div>
+            </div>
+            <div class="status-item">
+                <div class="connection-status">
+                    <div class="connection-dot"></div>
+                    <span>已连接</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 传感器数据 -->
+        <div class="section">
+            <h2 class="section-title">📊 传感器数据</h2>
+            <div class="sensor-grid">
+                <div class="sensor-card">
+                    <div class="sensor-icon">🌡️</div>
+                    <div class="sensor-name">空气温度</div>
+                    <div class="sensor-value" id="temp-value">26.5</div>
+                    <div class="sensor-unit">°C</div>
+                    <div class="sensor-time">更新时间: <span id="temp-time">--</span></div>
+                </div>
+
+                <div class="sensor-card">
+                    <div class="sensor-icon">💧</div>
+                    <div class="sensor-name">空气湿度</div>
+                    <div class="sensor-value" id="humidity-value">65.2</div>
+                    <div class="sensor-unit">%</div>
+                    <div class="sensor-time">更新时间: <span id="humidity-time">--</span></div>
+                </div>
+
+                <div class="sensor-card">
+                    <div class="sensor-icon">🌱</div>
+                    <div class="sensor-name">土壤湿度</div>
+                    <div class="sensor-value" id="soil-value">45.8</div>
+                    <div class="sensor-unit">%</div>
+                    <div class="sensor-time">更新时间: <span id="soil-time">--</span></div>
+                </div>
+
+                <div class="sensor-card">
+                    <div class="sensor-icon">☀️</div>
+                    <div class="sensor-name">光照强度</div>
+                    <div class="sensor-value" id="light-value">1250</div>
+                    <div class="sensor-unit">lux</div>
+                    <div class="sensor-time">更新时间: <span id="light-time">--</span></div>
+                </div>
+
+                <div class="sensor-card">
+                    <div class="sensor-icon">📊</div>
+                    <div class="sensor-name">气压</div>
+                    <div class="sensor-value" id="pressure-value">1013</div>
+                    <div class="sensor-unit">hPa</div>
+                    <div class="sensor-time">更新时间: <span id="pressure-time">--</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 执行器控制 -->
+        <div class="section">
+            <h2 class="section-title">🎮 执行器控制</h2>
+            <div class="sensor-grid">
+                <!-- 水泵控制 -->
+                <div class="actuator-card">
+                    <div class="actuator-header">
+                        <div class="sensor-name">💧 水泵</div>
+                        <div class="toggle-switch" id="pump-toggle" onclick="toggleActuator('pump')"></div>
+                    </div>
+                    <div class="control-buttons">
+                        <button class="btn btn-primary" onclick="sendCommand('pump', 'on')">开启</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('pump', 'off')">关闭</button>
+                    </div>
+                </div>
+
+                <!-- 风扇控制 -->
+                <div class="actuator-card">
+                    <div class="actuator-header">
+                        <div class="sensor-name">🌀 风扇</div>
+                        <div class="toggle-switch" id="fan-toggle" onclick="toggleActuator('fan')"></div>
+                    </div>
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>速度</span>
+                            <span id="fan-speed">50%</span>
+                        </div>
+                        <input type="range" id="fan-slider" min="0" max="100" value="50" 
+                               oninput="updateSlider('fan', this.value)">
+                    </div>
+                    <div class="control-buttons">
+                        <button class="btn btn-primary" onclick="sendValue('fan', 'fan-slider')">设置</button>
+                    </div>
+                </div>
+
+                <!-- LED控制 -->
+                <div class="actuator-card">
+                    <div class="actuator-header">
+                        <div class="sensor-name">💡 补光灯</div>
+                        <div class="toggle-switch" id="led-toggle" onclick="toggleActuator('led')"></div>
+                    </div>
+                    <div class="control-buttons">
+                        <button class="btn btn-primary" onclick="sendCommand('led', 'on')">开启</button>
+                        <button class="btn btn-secondary" onclick="sendCommand('led', 'off')">关闭</button>
+                    </div>
+                </div>
+
+                <!-- 舵机控制 -->
+                <div class="actuator-card">
+                    <div class="actuator-header">
+                        <div class="sensor-name">🔧 舵机</div>
+                        <div class="toggle-switch" id="servo-toggle" onclick="toggleActuator('servo')"></div>
+                    </div>
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>角度</span>
+                            <span id="servo-angle">90°</span>
+                        </div>
+                        <input type="range" id="servo-slider" min="0" max="180" value="90" 
+                               oninput="updateSlider('servo', this.value)">
+                    </div>
+                    <div class="control-buttons">
+                        <button class="btn btn-primary" onclick="sendValue('servo', 'servo-slider')">设置</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 系统日志 -->
+        <div class="section">
+            <h2 class="section-title">📝 系统日志</h2>
+            <div class="log-section" id="log-section">
+                <div class="log-entry">
+                    <span class="log-time">[系统]</span>
+                    <span class="log-message">平台启动完成</span>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>智慧农业物联网平台 v1.0 | 基于树莓派5 + YOLO</p>
+        </footer>
+    </div>
+
+    <script>
+        // 模拟数据更新
+        let dataCount = 0;
+
+        function updateSensorData() {
+            // 模拟传感器数据
+            const temp = (25 + Math.random() * 5).toFixed(1);
+            const humidity = (60 + Math.random() * 10).toFixed(1);
+            const soil = (40 + Math.random() * 20).toFixed(1);
+            const light = Math.floor(1000 + Math.random() * 500);
+            const pressure = (1010 + Math.random() * 5).toFixed(0);
+
+            document.getElementById('temp-value').textContent = temp;
+            document.getElementById('humidity-value').textContent = humidity;
+            document.getElementById('soil-value').textContent = soil;
+            document.getElementById('light-value').textContent = light;
+            document.getElementById('pressure-value').textContent = pressure;
+
+            const now = new Date().toLocaleTimeString();
+            document.getElementById('temp-time').textContent = now;
+            document.getElementById('humidity-time').textContent = now;
+            document.getElementById('soil-time').textContent = now;
+            document.getElementById('light-time').textContent = now;
+            document.getElementById('pressure-time').textContent = now;
+
+            dataCount++;
+            document.getElementById('data-count').textContent = dataCount;
+        }
+
+        function toggleActuator(name) {
+            const toggle = document.getElementById(`${name}-toggle`);
+            toggle.classList.toggle('active');
+            const state = toggle.classList.contains('active') ? 'on' : 'off';
+            addLog(`${name} ${state === 'on' ? '开启' : '关闭'}`);
+        }
+
+        function updateSlider(name, value) {
+            const display = document.getElementById(`${name}-speed`) || 
+                           document.getElementById(`${name}-angle`);
+            if (display) {
+                display.textContent = name === 'servo' ? `${value}°` : `${value}%`;
+            }
+        }
+
+        function sendCommand(actuator, command) {
+            addLog(`发送指令: ${actuator} -> ${command}`);
+            // 实际项目中这里会发送WebSocket消息
+        }
+
+        function sendValue(actuator, sliderId) {
+            const value = document.getElementById(sliderId).value;
+            addLog(`设置值: ${actuator} = ${value}`);
+            // 实际项目中这里会发送WebSocket消息
+        }
+
+        function addLog(message) {
+            const logSection = document.getElementById('log-section');
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-message">${message}</span>`;
+            logSection.insertBefore(entry, logSection.firstChild);
+
+            // 保持日志数量在50条以内
+            while (logSection.children.length > 50) {
+                logSection.removeChild(logSection.lastChild);
+            }
+        }
+
+        // 每5秒更新一次传感器数据
+        setInterval(updateSensorData, 5000);
+        updateSensorData();
+
+        // 添加初始日志
+        addLog('系统启动完成');
+        addLog('传感器连接正常');
+        addLog('执行器就绪');
+    </script>
+</body>
+</html>
