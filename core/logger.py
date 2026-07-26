@@ -28,10 +28,10 @@ def setup_logger(
     logger = logging.getLogger(name)
     logger.setLevel(getattr(logging, level.upper(), logging.INFO))
 
-    # 日志格式
+    # 日志格式 - 简化终端输出，突出关键信息
     formatter = logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        "%(asctime)s %(message)s",
+        datefmt="%H:%M:%S"
     )
 
     # 控制台输出

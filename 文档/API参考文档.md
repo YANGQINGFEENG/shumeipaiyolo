@@ -608,7 +608,49 @@
 
 ---
 
-### 3.2 硬件控制回执
+### 3.2 网关心跳上报
+
+**接口地址**: `POST /api/device/heartbeat`
+
+**功能说明**: 硬件端定期上报网关运行状态和设备在线统计。
+
+**请求体**:
+```json
+{
+  "type": "heartbeat",
+  "gateway_ip": "192.168.1.100",
+  "farm_id": 1,
+  "timestamp": "2026-07-26T10:30:00.000Z",
+  "stats": {
+    "sensors_total": 3,
+    "sensors_online": 2,
+    "sensors_offline": 1,
+    "actuators_total": 3,
+    "actuators_online": 3,
+    "actuators_offline": 0
+  }
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| type | string | 是 | 固定值 "heartbeat" |
+| gateway_ip | string | 是 | 网关IP地址 |
+| farm_id | number | 是 | 农场ID |
+| timestamp | string | 是 | 时间戳（ISO格式） |
+| stats | object | 是 | 设备状态统计 |
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "Heartbeat received"
+}
+```
+
+---
+
+### 3.3 硬件控制回执
 
 **接口地址**: `POST /api/device/ack`
 

@@ -1,72 +1,172 @@
-# 系统配置
 system:
-  name: "smart-farm-pi"
-  version: "1.0.0"
-  log_level: "INFO"
-  log_file: "logs/system.log"
-
-# 上传配置 (简化格式)
+  name: smart-farm-pi
+  version: 2.0.0
+  log_level: INFO
+  log_file: logs/system.log
+  timezone: Asia/Shanghai
+  enable_ui: true
+  ui_fullscreen: true
+  watchdog_enabled: true
 upload:
-  server_url: "http://192.168.1.22:3000"
-  gateway_ip: "192.168.1.63"
+  server_url: http://192.168.1.22:3000
+  gateway_ip: 192.168.1.63
+  gateway_type: wifi_sensor
+  mac: ""
   farm_id: 1
+  area: 温室1号区域
   interval: 30
   timeout: 10
   max_retries: 3
   retry_delay: 5
-
-# 设备节点配置 (sensor_id_value_key -> API类型的映射)
-# 服务器接受的传感器类型: temperature, humidity, light, soil_moisture, soil_temperature, ph, ec, co2, pm25, water_level, battery
-# 服务器接受的执行器类型: water_pump, fan, heater, valve, light, ventilator, fogger
-device_mapping:
-  sensors:
-    # DHT11: value dict keys are "temperature" and "humidity"
-    dht11_temperature:
-      node_id: "T-1-001"
-      type: "temperature"
-      name: "空气温度传感器"
-    dht11_humidity:
-      node_id: "H-1-001"
-      type: "humidity"
-      name: "空气湿度传感器"
-    # BMP280: value dict keys are "temperature" and "pressure"
-    bmp280_temperature:
-      node_id: "T-1-002"
-      type: "temperature"
-      name: "BMP280温度"
-    bmp280_pressure:
-      node_id: "PR-1-001"
-      type: "pressure"
-      name: "气压传感器"
-    bmp280_altitude:
-      node_id: "AL-1-001"
-      type: "altitude"
-      name: "海拔"
-    # Vibration: value is boolean
-    vibration:
-      node_id: "VB-1-001"
-      type: "vibration"
-      name: "振动传感器"
-  actuators:
-    relay:
-      node_id: "VL-1-001"
-      type: "valve"
-      name: "继电器"
-    laser:
-      node_id: "LT-1-001"
-      type: "light"
-      name: "激光"
-    rgb_led:
-      node_id: "LT-1-002"
-      type: "light"
-      name: "RGB-LED"
-
-# 缓存配置
-cache:
-  db_path: "data/cache.db"
-  max_age_days: 7
-
-# 心跳配置
+  upload_filter:
+    mode: all
+    device_ids: []
+    device_types: []
+  cache:
+    db_path: data/cache.db
+    max_age_days: 7
+    retry_interval: 60
+    batch_size: 50
 heartbeat:
   enabled: true
   interval: 30
+  timeout: 10
+device_mapping:
+  sensors:
+    dht11_temperature:
+      node_id: T-1-001
+      type: temperature
+      name: 空气温度传感器
+    dht11_humidity:
+      node_id: H-1-001
+      type: humidity
+      name: 空气湿度传感器
+    bmp280_temperature:
+      node_id: T-1-002
+      type: temperature
+      name: BMP280温度
+    bmp280_pressure:
+      node_id: PR-1-001
+      type: pressure
+      name: 气压传感器
+    bmp280_altitude:
+      node_id: AL-1-001
+      type: altitude
+      name: 海拔
+    vibration:
+      node_id: VB-1-001
+      type: vibration
+      name: 振动传感器
+  actuators:
+    relay:
+      node_id: VL-1-001
+      type: valve
+      name: 继电器
+    laser:
+      node_id: LT-1-001
+      type: light
+      name: 激光
+    rgb_led:
+      node_id: LT-1-002
+      type: light
+      name: RGB-LED
+scanner:
+  enabled_interfaces:
+  - i2c
+  - gpio
+  - adc
+  - onewire
+  i2c:
+    bus_number: 1
+    scan_addresses: []
+    known_devices:
+      '0x76': bmp280
+      '0x77': bmp280
+      '0x68': mpu6050
+      '0x27': lcd1602
+      '0x3f': lcd1602
+  gpio:
+    scan_pins:
+    - 5
+    - 6
+    - 12
+    - 13
+    - 16
+    - 17
+    - 19
+    - 20
+    - 21
+    - 22
+    - 23
+    - 24
+    - 25
+    - 26
+    - 27
+    exclude_pins: []
+    debounce_ms: 50
+  adc:
+    channels:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    threshold: 0.05
+    spi_port: 0
+    spi_device: 0
+  onewire:
+    bus_path: /sys/bus/w1/devices/
+    auto_load_kernel_module: true
+  auto_register: true
+  scan_on_startup: false
+ota:
+  mode: http
+  auto_check_enabled: true
+  auto_check_interval: 3600
+  auto_update: false
+  restart_after_update: true
+  http:
+    manifest_url: ''
+    timeout: 30
+    verify_ssl: true
+    backup_keep_count: 3
+    exclude_paths:
+    - .git
+    - __pycache__
+    - .backup
+    - .downloads
+    - logs
+    - data
+    - .venv
+    - venv
+    - .mimocode
+    - 3.程序案例
+    - 7.树莓派电子资料
+  git:
+    enabled: false
+    remote: origin
+    branch: main
+    reset_to_remote: true
+    update_submodules: true
+ui:
+  enabled: true
+  fullscreen: true
+  resolution: 1024x600
+  theme: light
+  refresh_interval_ms: 1000
+  font_family: PingFang SC
+  font_scale: 1.0
+  show_status_bar: true
+  show_tab_bar: true
+  pages:
+  - dashboard
+  - network
+  - devices
+  - scanner
+  - ota
+cache:
+  db_path: data/cache.db
+  max_age_days: 7

@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""继电器执行器"""
+"""继电器执行器 - 优先使用 lgpio，降级到 RPi.GPIO"""
 
-import subprocess
-import time
 from typing import Dict
 from drivers.actuators.base import BaseActuator, ActuatorState
 
 try:
-    from gpiozero import OutputDevice
+    import lgpio
+    HAS_LGPIO = True
+except ImportError:
+    HAS_LGPIO = False
+
+try:
+    import RPi.GPIO as GPIO
     HAS_GPIO = True
 except ImportError:
     HAS_GPIO = False
@@ -21,76 +25,92 @@ class RelayActuator(BaseActuator):
                  pin: int = 16, config: Dict = None):
         super().__init__(actuator_id, name, "relay", config)
         self.pin = pin
-        self._device = None
-        self._retry_count = 3
-        self._retry_delay = 1
-
-    def _cleanup_gpio(self):
-        """清理GPIO资源"""
-        try:
-            subprocess.run(["sudo", "pkill", "-9", "-f", "libgpiod"], 
-                          capture_output=True, timeout=3)
-            time.sleep(0.3)
-        except:
-            pass
+        self._initialized = False
+        self._state = ActuatorState.OFF
+        self._h = None  # lgpio 句柄
 
     def initialize(self) -> bool:
-        if not HAS_GPIO:
-            self.logger.warning("gpiozero not available, running in test mode")
+        if HAS_LGPIO:
+            try:
+                self._h = lgpio.gpiochip_open(0)
+                if self._h < 0:
+                    self.logger.error("lgpio chip open failed")
+                    return False
+                lgpio.gpio_claim_output(self._h, self.pin)
+                lgpio.gpio_write(self._h, self.pin, 0)  # 默认关闭
+                self._initialized = True
+                self._state = ActuatorState.OFF
+                self.logger.info(f"Relay initialized (lgpio): pin={self.pin}")
+                return True
+            except Exception as e:
+                self.logger.error(f"Relay lgpio init error: {e}")
+                return False
+        elif HAS_GPIO:
+            try:
+                GPIO.setmode(GPIO.BCM)
+                GPIO.setup(self.pin, GPIO.OUT)
+                GPIO.output(self.pin, GPIO.LOW)
+                self._initialized = True
+                self._state = ActuatorState.OFF
+                self.logger.info(f"Relay initialized (RPi.GPIO): pin={self.pin}")
+                return True
+            except Exception as e:
+                self.logger.error(f"Relay RPi.GPIO init error: {e}")
+                return False
+        else:
+            self.logger.warning("No GPIO library available, running in test mode")
             self._initialized = True
             self._state = ActuatorState.OFF
             return True
 
-        for attempt in range(self._retry_count):
-            try:
-                self._cleanup_gpio()
-                time.sleep(0.3)
-                self._device = OutputDevice(self.pin)
-                self._initialized = True
-                self._state = ActuatorState.OFF
-                self.logger.info(f"Relay initialized: pin={self.pin}")
-                return True
-            except Exception as e:
-                self.logger.warning(f"Init attempt {attempt + 1} failed: {e}")
-                if attempt < self._retry_count - 1:
-                    self._cleanup_gpio()
-                    time.sleep(self._retry_delay)
-
-        self.logger.error(f"Relay init failed after {self._retry_count} attempts")
-        return False
-
     def turn_on(self) -> bool:
-        if self._device:
-            try:
-                self._device.on()
-                self._state = ActuatorState.ON
-                self.logger.info("Relay ON")
-                return True
-            except Exception as e:
-                self.logger.error(f"Turn on error: {e}")
-                self._state = ActuatorState.ERROR
-                return False
-        self._state = ActuatorState.ON
-        return True
+        if not self._initialized:
+            return False
+            
+        try:
+            if HAS_LGPIO:
+                lgpio.gpio_write(self._h, self.pin, 1)
+            elif HAS_GPIO:
+                GPIO.output(self.pin, GPIO.HIGH)
+            
+            self._state = ActuatorState.ON
+            self.logger.info("Relay ON")
+            return True
+        except Exception as e:
+            self.logger.error(f"Relay turn on error: {e}")
+            self._state = ActuatorState.ERROR
+            return False
 
     def turn_off(self) -> bool:
-        if self._device:
-            try:
-                self._device.off()
-                self._state = ActuatorState.OFF
-                self.logger.info("Relay OFF")
-                return True
-            except Exception as e:
-                self.logger.error(f"Turn off error: {e}")
-                self._state = ActuatorState.ERROR
-                return False
-        self._state = ActuatorState.OFF
-        return True
+        if not self._initialized:
+            return False
+            
+        try:
+            if HAS_LGPIO:
+                lgpio.gpio_write(self._h, self.pin, 0)
+            elif HAS_GPIO:
+                GPIO.output(self.pin, GPIO.LOW)
+            
+            self._state = ActuatorState.OFF
+            self.logger.info("Relay OFF")
+            return True
+        except Exception as e:
+            self.logger.error(f"Relay turn off error: {e}")
+            self._state = ActuatorState.ERROR
+            return False
 
     def cleanup(self):
-        if self._device:
+        if HAS_LGPIO and self._h is not None:
             try:
-                self._device.close()
+                lgpio.gpio_write(self._h, self.pin, 0)
+                lgpio.gpio_free(self._h, self.pin)
+                lgpio.gpiochip_close(self._h)
+            except:
+                pass
+        elif HAS_GPIO and self._initialized:
+            try:
+                GPIO.output(self.pin, GPIO.LOW)
+                GPIO.setup(self.pin, GPIO.IN)
             except:
                 pass
         self._initialized = False
