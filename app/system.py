@@ -537,8 +537,14 @@ class System:
                 if not self.running:
                     break
 
-                # 从服务器获取待执行命令（按协议规范，传递执行器ID列表）
-                actuator_ids = list(self.actuators.keys())
+                # 从服务器获取待执行命令（使用映射后的节点ID）
+                actuator_ids = []
+                actuators_mapping = self.device_mapping.get("actuators", {})
+                for actuator_id in self.actuators.keys():
+                    mapping = actuators_mapping.get(actuator_id, {})
+                    node_id = mapping.get("node_id", actuator_id)
+                    actuator_ids.append(node_id)
+                
                 commands = self.upload.fetch_pending_commands(actuator_ids)
                 if commands:
                     self._execute_commands(commands)
@@ -553,17 +559,27 @@ class System:
         """
         for cmd in commands:
             try:
-                actuator_id = cmd.get("actuator_id", "")
+                actuator_node_id = cmd.get("actuator_id", "")
                 command = cmd.get("command", "")
                 command_id = cmd.get("id", 0)
                 control_value = cmd.get("control_value")
 
+                # 反向映射：从节点ID找到原始执行器ID
+                actuator_id = actuator_node_id
+                actuators_mapping = self.device_mapping.get("actuators", {})
+                for orig_id, mapping in actuators_mapping.items():
+                    if mapping.get("node_id") == actuator_node_id:
+                        actuator_id = orig_id
+                        break
+
+                logger.info(f"[命令] 硬件端查询指令 - 执行器: {actuator_id}, 指令: {command}, 控制值: {control_value}, 命令ID: {command_id}")
+
                 # 查找执行器
                 actuator = self.actuators.get(actuator_id)
                 if not actuator:
-                    logger.warning(f"[命令] 未找到执行器: {actuator_id}")
-                    # 发送失败回执
-                    self.upload.send_ack(actuator_id, command_id, "failed")
+                    logger.warning(f"[命令] 未找到执行器: {actuator_id} (节点ID: {actuator_node_id})")
+                    # 发送失败回执（使用节点ID）
+                    self.upload.send_ack(actuator_node_id, command_id, "failed")
                     continue
 
                 # 执行命令
@@ -579,14 +595,17 @@ class System:
                 elif command == "value" and control_value is not None:
                     # 设置控制值（仅支持整数类型）
                     try:
+                        # 将控制值转换为整数（服务器可能返回字符串如 '0.00'）
+                        int_value = int(float(control_value))
+                        
                         # RGB-LED 需要特殊处理颜色值
                         if actuator.actuator_type == "rgb_led":
-                            r, g, b = [float(control_value) / 100] * 3
+                            r, g, b = [int_value / 100] * 3
                             actuator.set_color(r, g, b)
                             success = True
                             state = "on"
                         elif hasattr(actuator, "set_value"):
-                            success = actuator.set_value(int(control_value))
+                            success = actuator.set_value(int_value)
                             state = "on"
                         else:
                             logger.warning(f"[命令] 执行器 {actuator_id} 不支持 value 命令")
@@ -595,10 +614,12 @@ class System:
 
                 if success:
                     logger.info(f"[命令] 执行成功: {actuator_id} -> {command}")
-                    self.upload.send_ack(actuator_id, command_id, "executed", control_value)
+                    # 使用节点ID发送回执（协议规范要求）
+                    self.upload.send_ack(actuator_node_id, command_id, "executed", control_value)
                 else:
                     logger.error(f"[命令] 执行失败: {actuator_id} -> {command}")
-                    self.upload.send_ack(actuator_id, command_id, "failed", control_value)
+                    # 使用节点ID发送回执（协议规范要求）
+                    self.upload.send_ack(actuator_node_id, command_id, "failed", control_value)
 
             except Exception as e:
                 logger.error(f"[命令] 执行指令异常: {e}")

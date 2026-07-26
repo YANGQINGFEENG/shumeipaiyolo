@@ -390,10 +390,14 @@ class UploadService:
                         f"{server_url}/api/actuators/{actuator_id}/commands",
                         timeout=timeout,
                     )
+                    logger.debug(f"[命令] 查询 {actuator_id} 响应: status={resp.status_code}, body={resp.text}")
                     if resp.status_code == 200:
                         result = resp.json()
                         if result.get("success") and result.get("data"):
                             commands.append(result["data"])
+                            logger.info(f"[命令] 获取到指令: {result['data']}")
+                        else:
+                            logger.debug(f"[命令] {actuator_id} 无待执行指令: {result}")
                 except Exception as e:
                     logger.error(f"Fetch command for {actuator_id} error: {e}")
 

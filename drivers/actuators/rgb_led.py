@@ -137,6 +137,30 @@ class RGBLEDActuator(BaseActuator):
             self._state = ActuatorState.ERROR
             return False
 
+    def set_value(self, value: int) -> bool:
+        """设置控制值（将数值控制转换为颜色控制）
+        
+        Args:
+            value: 控制值（0-100），用于控制亮度
+        
+        Returns:
+            是否成功
+        """
+        if not self._initialized:
+            return False
+        
+        try:
+            # 将 0-100 的值转换为 0.0-1.0 的亮度值
+            brightness = max(0.0, min(1.0, value / 100.0))
+            self.set_color(brightness, brightness, brightness)
+            self._state = ActuatorState.ON if value > 0 else ActuatorState.OFF
+            self.logger.info(f"RGB-LED brightness: {value}%")
+            return True
+        except Exception as e:
+            self.logger.error(f"RGB-LED set value error: {e}")
+            self._state = ActuatorState.ERROR
+            return False
+
     def execute_command(self, command: str) -> bool:
         """执行控制命令，支持颜色设置"""
         command = command.lower().strip()

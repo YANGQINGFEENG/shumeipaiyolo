@@ -99,6 +99,20 @@ class LaserActuator(BaseActuator):
             self._state = ActuatorState.ERROR
             return False
 
+    def set_value(self, value: int) -> bool:
+        """设置控制值（将数值控制转换为开关控制）
+        
+        Args:
+            value: 控制值（0-100），大于0开启，等于0关闭
+        
+        Returns:
+            是否成功
+        """
+        if value > 0:
+            return self.turn_on()
+        else:
+            return self.turn_off()
+
     def cleanup(self):
         if HAS_LGPIO and self._h is not None:
             try:
