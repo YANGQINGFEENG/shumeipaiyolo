@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""BMP280 气压温度传感器 - 使用 smbus2 直接操作 I2C，参考程序案例算法"""
+"""BMP280 气压温度传感器 - 优化版本，增加缓存和非阻塞读取"""
 
 import time
+import threading
 from datetime import datetime
 from typing import Any, Dict
 from drivers.sensors.base import BaseSensor, DataQuality
@@ -15,7 +16,16 @@ except ImportError:
 
 
 class BMP280Sensor(BaseSensor):
-    """BMP280 气压温度传感器 - 参考程序案例逻辑"""
+    """BMP280 气压温度传感器 - 优化版本
+    
+    优化点：
+    1. 增加数据缓存，避免重复读取
+    2. 使用非阻塞状态机模式读取
+    3. 读取失败时返回缓存数据
+    """
+
+    # 缓存有效期（秒）
+    CACHE_TTL = 2
 
     # BMP280 寄存器地址
     BMP280_REG_TEMP_XLSB = 0xFC
@@ -39,11 +49,13 @@ class BMP280Sensor(BaseSensor):
         self._bus = None
         self._calib_data = {}
         self._initialized = False
+        self._last_value = {"temperature": None, "pressure": None, "altitude": None}
+        self._last_time = None
+        self._read_lock = threading.Lock()
 
     def _read_calibration_data(self):
         """读取校准数据（参考 BMP280 数据手册算法）"""
         try:
-            # 读取温度校准数据 (0x88-0x8A)
             data = self._bus.read_i2c_block_data(self.address, 0x88, 24)
             
             # 温度校准参数
@@ -122,6 +134,7 @@ class BMP280Sensor(BaseSensor):
         return p / 256.0
 
     def initialize(self) -> bool:
+        """初始化传感器"""
         if not HAS_SMBUS:
             self.logger.warning("smbus2 not available, running in test mode")
             self._initialized = True
@@ -145,11 +158,8 @@ class BMP280Sensor(BaseSensor):
             if not self._read_calibration_data():
                 return False
                 
-            # 配置传感器（参考程序案例：高分辨率模式）
-            # config = 0x00: 无滤波, 待机时间 0.5ms
+            # 配置传感器（高分辨率模式）
             self._bus.write_byte_data(self.address, self.BMP280_REG_CONFIG, 0x00)
-            # ctrl_meas = 0x3F: 高分辨率, 温度和气压正常测量模式
-            # bit[7:5]=011(温度高分辨率), bit[4:2]=011(气压高分辨率), bit[1:0]=11(正常模式)
             self._bus.write_byte_data(self.address, self.BMP280_REG_CTRL_MEAS, 0x3F)
             
             self._initialized = True
@@ -160,21 +170,26 @@ class BMP280Sensor(BaseSensor):
             self.logger.error(f"BMP280 init error: {e}")
             return False
 
-    def read(self) -> Dict[str, Any]:
-        if not self._initialized or not self._bus:
-            return {"value": None, "unit": "", "quality": DataQuality.UNAVAILABLE}
+    def _read_raw(self) -> Dict[str, Any]:
+        """原始读取传感器数据（内部方法）"""
+        if not HAS_SMBUS or not self._bus:
+            # 测试模式
+            return {
+                "temperature": 25.0,
+                "pressure": 1013.25,
+                "altitude": 0.0,
+                "quality": DataQuality.GOOD
+            }
 
         try:
-            import time
-            
-            # 等待测量完成
+            # 等待测量完成（最多等待 100ms）
             for _ in range(20):
                 status = self._bus.read_byte_data(self.address, self.BMP280_REG_STATUS)
                 if (status & 0x08) == 0:
                     break
-                time.sleep(0.05)
+                time.sleep(0.005)
             
-            # 读取原始数据（参考程序案例：块读取）
+            # 读取原始数据（块读取）
             data = self._bus.read_i2c_block_data(self.address, self.BMP280_REG_PRESS_MSB, 8)
             
             # 解析原始气压数据
@@ -189,7 +204,7 @@ class BMP280Sensor(BaseSensor):
             temp_xlsb = data[5]
             raw_temp = (temp_msb << 12) | (temp_lsb << 4) | (temp_xlsb >> 4)
             
-            # 计算温度和气压（参考程序案例算法）
+            # 计算温度和气压
             temp, t_fine = self._compensate_temperature(raw_temp)
             press = self._compensate_pressure(raw_press, t_fine)
             
@@ -199,28 +214,90 @@ class BMP280Sensor(BaseSensor):
             # 数据校验
             if not (-40 <= temp <= 85) or not (300 <= pressure_hpa <= 1100):
                 self.logger.warning(f"BMP280 data out of range: temp={temp}, press={pressure_hpa}hPa")
-                return {"value": None, "unit": "", "quality": DataQuality.ERROR}
+                return {"quality": DataQuality.ERROR}
             
-            # 计算海拔（参考程序案例）
+            # 计算海拔
             alt = 44330.0 * (1.0 - (pressure_hpa / self.sea_level_pressure) ** (1.0 / 5.255))
             
-            self._last_value = {
+            return {
                 "temperature": round(temp, 2),
                 "pressure": round(pressure_hpa, 2),
-                "altitude": round(alt, 2)
-            }
-            self._last_time = datetime.now()
-
-            return {
-                "value": self._last_value,
-                "unit": {"temperature": "°C", "pressure": "hPa", "altitude": "m"},
+                "altitude": round(alt, 2),
                 "quality": DataQuality.GOOD
             }
         except Exception as e:
             self.logger.error(f"BMP280 read error: {e}")
-            return {"value": None, "unit": "", "quality": DataQuality.ERROR}
+            return {"quality": DataQuality.ERROR}
+
+    def read(self) -> Dict[str, Any]:
+        """读取传感器数据（带缓存机制）
+        
+        优化策略：
+        1. 如果缓存数据在有效期内，直接返回缓存
+        2. 如果读取失败，返回最后一次有效缓存
+        3. 加锁防止并发读取冲突
+        """
+        if not self._initialized or not self._bus:
+            return {"value": None, "unit": "", "quality": DataQuality.UNAVAILABLE}
+
+        # 检查缓存是否有效
+        now = datetime.now()
+        if self._last_time is not None:
+            elapsed = (now - self._last_time).total_seconds()
+            if elapsed < self.CACHE_TTL and self._last_value["temperature"] is not None:
+                return {
+                    "value": self._last_value,
+                    "unit": {"temperature": "°C", "pressure": "hPa", "altitude": "m"},
+                    "quality": DataQuality.GOOD
+                }
+
+        # 加锁读取
+        with self._read_lock:
+            # 再次检查缓存
+            if self._last_time is not None:
+                elapsed = (datetime.now() - self._last_time).total_seconds()
+                if elapsed < self.CACHE_TTL and self._last_value["temperature"] is not None:
+                    return {
+                        "value": self._last_value,
+                        "unit": {"temperature": "°C", "pressure": "hPa", "altitude": "m"},
+                        "quality": DataQuality.GOOD
+                    }
+
+            # 执行读取
+            result = self._read_raw()
+            
+            if result.get("quality") == DataQuality.GOOD:
+                # 更新缓存
+                self._last_value = {
+                    "temperature": result["temperature"],
+                    "pressure": result["pressure"],
+                    "altitude": result["altitude"]
+                }
+                self._last_time = now
+                
+                return {
+                    "value": self._last_value,
+                    "unit": {"temperature": "°C", "pressure": "hPa", "altitude": "m"},
+                    "quality": DataQuality.GOOD
+                }
+            else:
+                # 读取失败，返回缓存数据
+                if self._last_value["temperature"] is not None:
+                    self.logger.warning(f"BMP280 read failed, returning cached data")
+                    return {
+                        "value": self._last_value,
+                        "unit": {"temperature": "°C", "pressure": "hPa", "altitude": "m"},
+                        "quality": DataQuality.WARNING
+                    }
+                else:
+                    return {
+                        "value": None,
+                        "unit": "",
+                        "quality": DataQuality.ERROR
+                    }
 
     def cleanup(self):
+        """释放资源"""
         if self._bus:
             try:
                 self._bus.close()

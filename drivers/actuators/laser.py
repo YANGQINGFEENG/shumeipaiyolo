@@ -1,21 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""激光执行器 - 优先使用 lgpio，降级到 RPi.GPIO"""
+"""激光执行器 - 使用统一 GPIO 管理器"""
 
 from typing import Dict
 from drivers.actuators.base import BaseActuator, ActuatorState
-
-try:
-    import lgpio
-    HAS_LGPIO = True
-except ImportError:
-    HAS_LGPIO = False
-
-try:
-    import RPi.GPIO as GPIO
-    HAS_GPIO = True
-except ImportError:
-    HAS_GPIO = False
+from drivers.gpio_manager import gpio_manager
 
 
 class LaserActuator(BaseActuator):
@@ -27,73 +16,52 @@ class LaserActuator(BaseActuator):
         self.pin = pin
         self._initialized = False
         self._state = ActuatorState.OFF
-        self._h = None  # lgpio 句柄
 
     def initialize(self) -> bool:
-        if HAS_LGPIO:
-            try:
-                self._h = lgpio.gpiochip_open(0)
-                if self._h < 0:
-                    self.logger.error("lgpio chip open failed")
-                    return False
-                lgpio.gpio_claim_output(self._h, self.pin)
-                lgpio.gpio_write(self._h, self.pin, 0)  # 默认关闭
-                self._initialized = True
-                self._state = ActuatorState.OFF
-                self.logger.info(f"Laser initialized (lgpio): pin={self.pin}")
-                return True
-            except Exception as e:
-                self.logger.error(f"Laser lgpio init error: {e}")
-                return False
-        elif HAS_GPIO:
-            try:
-                GPIO.setmode(GPIO.BCM)
-                GPIO.setup(self.pin, GPIO.OUT)
-                GPIO.output(self.pin, GPIO.LOW)
-                self._initialized = True
-                self._state = ActuatorState.OFF
-                self.logger.info(f"Laser initialized (RPi.GPIO): pin={self.pin}")
-                return True
-            except Exception as e:
-                self.logger.error(f"Laser RPi.GPIO init error: {e}")
-                return False
-        else:
-            self.logger.warning("No GPIO library available, running in test mode")
+        """初始化激光 - 使用 GPIO 管理器申请引脚"""
+        if not gpio_manager.is_initialized():
+            gpio_manager.initialize()
+        
+        if gpio_manager.claim_output(self.pin, self.actuator_id, initial_value=0):
             self._initialized = True
             self._state = ActuatorState.OFF
+            self.logger.info(f"Laser initialized: pin={self.pin}")
             return True
+        else:
+            self.logger.error(f"Laser init failed: cannot claim pin {self.pin}")
+            return False
 
     def turn_on(self) -> bool:
+        """打开激光"""
         if not self._initialized:
             return False
             
         try:
-            if HAS_LGPIO:
-                lgpio.gpio_write(self._h, self.pin, 1)
-            elif HAS_GPIO:
-                GPIO.output(self.pin, GPIO.HIGH)
-            
-            self._state = ActuatorState.ON
-            self.logger.info("Laser ON")
-            return True
+            if gpio_manager.write(self.pin, 1):
+                self._state = ActuatorState.ON
+                self.logger.info("Laser ON")
+                return True
+            else:
+                self._state = ActuatorState.ERROR
+                return False
         except Exception as e:
             self.logger.error(f"Laser turn on error: {e}")
             self._state = ActuatorState.ERROR
             return False
 
     def turn_off(self) -> bool:
+        """关闭激光"""
         if not self._initialized:
             return False
             
         try:
-            if HAS_LGPIO:
-                lgpio.gpio_write(self._h, self.pin, 0)
-            elif HAS_GPIO:
-                GPIO.output(self.pin, GPIO.LOW)
-            
-            self._state = ActuatorState.OFF
-            self.logger.info("Laser OFF")
-            return True
+            if gpio_manager.write(self.pin, 0):
+                self._state = ActuatorState.OFF
+                self.logger.info("Laser OFF")
+                return True
+            else:
+                self._state = ActuatorState.ERROR
+                return False
         except Exception as e:
             self.logger.error(f"Laser turn off error: {e}")
             self._state = ActuatorState.ERROR
@@ -113,18 +81,19 @@ class LaserActuator(BaseActuator):
         else:
             return self.turn_off()
 
+    def get_hardware_state(self) -> bool:
+        """读取硬件实际状态"""
+        if not self._initialized:
+            return False
+        try:
+            value = gpio_manager.read(self.pin)
+            return value == 1
+        except Exception as e:
+            self.logger.error(f"Laser read state error: {e}")
+            return False
+
     def cleanup(self):
-        if HAS_LGPIO and self._h is not None:
-            try:
-                lgpio.gpio_write(self._h, self.pin, 0)
-                lgpio.gpio_free(self._h, self.pin)
-                lgpio.gpiochip_close(self._h)
-            except:
-                pass
-        elif HAS_GPIO and self._initialized:
-            try:
-                GPIO.output(self.pin, GPIO.LOW)
-                GPIO.setup(self.pin, GPIO.IN)
-            except:
-                pass
+        """释放引脚资源"""
+        gpio_manager.release(self.pin, self.actuator_id)
         self._initialized = False
+        self._state = ActuatorState.UNKNOWN

@@ -3,8 +3,8 @@
 """智慧农业硬件系统 - 统一入口
 
 提供命令行控制：
-    python main.py start               启动系统（默认带触摸屏 UI）
-    python main.py start --no-ui      启动系统（仅命令行模式）
+    python main.py start               启动系统（带终端交互界面）
+    python main.py start --no-ui      启动系统（无界面后台模式）
     python main.py scan               扫描已连接的硬件设备
     python main.py scan --save        扫描并保存结果到配置文件
     python main.py status             查看系统运行状态
@@ -64,12 +64,24 @@ def _print_kv(key: str, value, indent: int = 0):
 def cmd_start(args) -> int:
     """启动系统"""
     from app.system import System
+    from cli.cli_interface import CLIInterface
 
-    enable_ui = not args.no_ui
+    # 默认启动终端交互界面，--no-ui 为后台模式
+    enable_cli = not args.no_ui
+    enable_ui = False  # 不再使用图形 UI
+
     system = System(config_dir=args.config_dir, enable_ui=enable_ui)
 
     try:
-        system.start()
+        if enable_cli:
+            # 终端模式：启动服务后立即返回，由 CLI 接管交互
+            system.start()
+            cli = CLIInterface(system)
+            cli.run()
+        else:
+            # 后台模式：启动服务并进入主循环
+            system.start()
+        
         return 0
     except KeyboardInterrupt:
         print("\n收到中断信号，正在停止...")

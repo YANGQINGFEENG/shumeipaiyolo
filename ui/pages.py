@@ -953,3 +953,225 @@ class OTAPage(BasePage):
         else:
             self.label_update_status.set_status("error", "回滚失败")
             self.label_progress.config(text="回滚失败")
+
+
+class SystemConfigPage(BasePage):
+    """系统配置页面 - 设置上传参数、服务器地址、开机自启等"""
+
+    name = "system"
+    title = "系统配置"
+
+    def _build_ui(self):
+        """构建系统配置界面"""
+        PageHeader(self, "系统配置", "上传参数与系统设置").pack(fill="x")
+
+        # 上传参数卡片
+        upload_card = Card(self)
+        upload_card.pack(fill="x", padx=Theme.SPACING_LG, pady=Theme.SPACING_MD)
+
+        tk.Label(
+            upload_card, text="上传参数",
+            bg=Theme.BG_SECONDARY, fg=Theme.TEXT_PRIMARY,
+            font=Theme.get_font(Theme.FONT_HEADLINE, bold=True),
+        ).pack(anchor="w", padx=Theme.SPACING_LG, pady=Theme.SPACING_MD)
+
+        self.input_interval = LabeledInput(
+            upload_card, "上传间隔 (秒)",
+            value=str(self.app.config.get("upload.interval", 30)),
+            input_type="number",
+        )
+        self.input_interval.pack(fill="x")
+
+        # 服务器配置卡片
+        server_card = Card(self)
+        server_card.pack(fill="x", padx=Theme.SPACING_LG, pady=Theme.SPACING_MD)
+
+        tk.Label(
+            server_card, text="服务器配置",
+            bg=Theme.BG_SECONDARY, fg=Theme.TEXT_PRIMARY,
+            font=Theme.get_font(Theme.FONT_HEADLINE, bold=True),
+        ).pack(anchor="w", padx=Theme.SPACING_LG, pady=Theme.SPACING_MD)
+
+        # 解析当前服务器地址和端口
+        server_url = self.app.config.get("upload.server_url", "http://192.168.1.22:3000")
+        host, port = self._parse_server_url(server_url)
+
+        self.input_server_host = LabeledInput(
+            server_card, "服务器地址",
+            value=host,
+            placeholder="如: 192.168.1.22 或 your-server.com",
+        )
+        self.input_server_host.pack(fill="x")
+
+        self.input_server_port = LabeledInput(
+            server_card, "端口号",
+            value=str(port),
+            input_type="number",
+        )
+        self.input_server_port.pack(fill="x")
+
+        # 开机自启配置卡片
+        autostart_card = Card(self)
+        autostart_card.pack(fill="x", padx=Theme.SPACING_LG, pady=Theme.SPACING_MD)
+
+        tk.Label(
+            autostart_card, text="开机自启",
+            bg=Theme.BG_SECONDARY, fg=Theme.TEXT_PRIMARY,
+            font=Theme.get_font(Theme.FONT_HEADLINE, bold=True),
+        ).pack(anchor="w", padx=Theme.SPACING_LG, pady=Theme.SPACING_MD)
+
+        # 开机自启开关
+        autostart_frame = tk.Frame(autostart_card, bg=Theme.BG_SECONDARY)
+        autostart_frame.pack(fill="x", padx=Theme.SPACING_LG, pady=Theme.SPACING_SM)
+
+        tk.Label(
+            autostart_frame, text="启用开机自启",
+            bg=Theme.BG_SECONDARY, fg=Theme.TEXT_PRIMARY,
+            font=Theme.get_body_font(),
+        ).pack(side="left")
+
+        # 检查当前开机自启状态
+        self._update_autostart_status()
+        self.switch_autostart = Switch(
+            autostart_frame,
+            value=self._autostart_enabled,
+            on_change=self._on_autostart_toggle,
+        )
+        self.switch_autostart.pack(side="right")
+
+        # 服务状态显示
+        self.label_service_status = StatusIndicator(
+            autostart_card, "idle", self._service_status
+        )
+        self.label_service_status.pack(anchor="w", padx=Theme.SPACING_LG, pady=Theme.SPACING_SM)
+
+        # 权限提示
+        tk.Label(
+            autostart_card,
+            text="提示：修改开机自启需要 sudo 权限，可能需要输入密码",
+            bg=Theme.BG_SECONDARY, fg=Theme.TEXT_TERTIARY,
+            font=Theme.get_caption_font(),
+            anchor="w",
+        ).pack(anchor="w", padx=Theme.SPACING_LG, pady=Theme.SPACING_SM)
+
+        # 操作按钮
+        btn_frame = tk.Frame(self, bg=Theme.BG_PRIMARY)
+        btn_frame.pack(fill="x", padx=Theme.SPACING_LG, pady=Theme.SPACING_LG)
+
+        PrimaryButton(btn_frame, "保存配置", command=self.save_config).pack(
+            side="left", padx=(0, Theme.SPACING_SM), fill="x", expand=True
+        )
+        SecondaryButton(btn_frame, "测试连接", command=self.test_connection).pack(
+            side="left", fill="x", expand=True
+        )
+
+    def _parse_server_url(self, url: str) -> tuple:
+        """解析服务器URL，分离主机和端口
+
+        Args:
+            url: 完整的服务器URL
+
+        Returns:
+            (host, port) 元组
+        """
+        from urllib.parse import urlparse
+
+        try:
+            parsed = urlparse(url)
+            host = parsed.hostname or ""
+            port = parsed.port or 3000
+            return host, port
+        except Exception:
+            return "192.168.1.22", 3000
+
+    def _build_server_url(self, host: str, port: int) -> str:
+        """根据主机和端口构建完整URL"""
+        return f"http://{host}:{port}"
+
+    def _update_autostart_status(self):
+        """更新开机自启状态"""
+        try:
+            from utils.systemd_utils import (
+                is_service_enabled, get_service_status,
+            )
+
+            self._autostart_enabled = is_service_enabled()
+            self._service_status = get_service_status()
+        except Exception as e:
+            self._autostart_enabled = False
+            self._service_status = f"状态获取失败: {e}"
+
+    def _on_autostart_toggle(self, value: bool):
+        """开机自启开关切换回调"""
+        try:
+            from utils.systemd_utils import enable_service, disable_service
+
+            if value:
+                success = enable_service()
+            else:
+                success = disable_service()
+
+            if success:
+                self._update_autostart_status()
+                self.label_service_status.set_status(
+                    "success" if value else "idle",
+                    self._service_status,
+                )
+                messagebox.showinfo(
+                    "成功",
+                    "开机自启已" + ("启用" if value else "禁用"),
+                )
+            else:
+                # 恢复开关状态
+                self.switch_autostart.set(not value)
+                messagebox.showerror(
+                    "失败",
+                    "修改开机自启失败，请检查是否有 sudo 权限",
+                )
+        except Exception as e:
+            self.switch_autostart.set(not value)
+            messagebox.showerror("错误", f"操作失败: {e}")
+
+    def save_config(self):
+        """保存配置"""
+        try:
+            # 收集配置
+            host = self.input_server_host.get().strip()
+            port = int(self.input_server_port.get() or "3000")
+            interval = int(self.input_interval.get() or "30")
+
+            if not host:
+                messagebox.showerror("错误", "服务器地址不能为空")
+                return
+
+            # 构建完整URL
+            server_url = self._build_server_url(host, port)
+
+            # 更新上传配置
+            upload_config = self.app.config.get("upload", {})
+            upload_config.update({
+                "server_url": server_url,
+                "interval": interval,
+            })
+            self.app.config.update("upload", upload_config)
+
+            messagebox.showinfo("成功", "配置已保存并生效（热加载）")
+        except Exception as e:
+            messagebox.showerror("错误", f"保存配置失败: {e}")
+
+    def test_connection(self):
+        """测试服务器连接"""
+        try:
+            import requests
+
+            host = self.input_server_host.get().strip()
+            port = int(self.input_server_port.get() or "3000")
+            server_url = self._build_server_url(host, port).rstrip("/")
+
+            resp = requests.get(f"{server_url}/api/sensors", timeout=5)
+            if resp.status_code in [200, 404]:
+                messagebox.showinfo("成功", f"连接成功\n服务器: {server_url}\n状态码: {resp.status_code}")
+            else:
+                messagebox.showwarning("警告", f"服务器响应异常\n状态码: {resp.status_code}")
+        except Exception as e:
+            messagebox.showerror("失败", f"连接失败: {e}")

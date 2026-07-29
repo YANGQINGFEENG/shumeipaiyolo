@@ -9,7 +9,7 @@ from typing import Optional, Dict, List
 from ui.theme import Theme
 from ui.pages import (
     BasePage, DashboardPage, NetworkConfigPage,
-    DevicesPage, ScannerPage, OTAPage,
+    DevicesPage, ScannerPage, OTAPage, SystemConfigPage,
 )
 
 
@@ -35,7 +35,10 @@ class MainWindow:
 
         # 设置窗口大小（7寸触摸屏分辨率通常为 1024x600 或 800x480）
         if fullscreen:
-            self.root.attributes("-fullscreen", True)
+            try:
+                self.root.attributes("-fullscreen", True)
+            except Exception:
+                self.root.geometry("1024x600")
         else:
             self.root.geometry("1024x600")
             # 居中显示
@@ -118,14 +121,15 @@ class MainWindow:
         self.tab_bar.pack(fill="x", side="bottom")
         self.tab_bar.pack_propagate(False)
 
-        # 5个 Tab
+        # 6个 Tab（使用纯文本图标，避免 emoji 兼容性问题）
         self.tabs: Dict[str, tk.Button] = {}
         tab_configs = [
-            ("dashboard", "仪表盘", "📊"),
-            ("network", "网络配置", "🌐"),
-            ("devices", "设备管理", "🔌"),
-            ("scanner", "设备扫描", "🔍"),
-            ("ota", "在线升级", "⬆️"),
+            ("dashboard", "仪表盘", "[=]"),
+            ("network", "网络配置", "[~]"),
+            ("system", "系统配置", "[*]"),
+            ("devices", "设备管理", "[#]"),
+            ("scanner", "设备扫描", "[?]"),
+            ("ota", "在线升级", "[^]"),
         ]
 
         for page_name, label, icon in tab_configs:
@@ -180,6 +184,7 @@ class MainWindow:
         page_classes = {
             "dashboard": DashboardPage,
             "network": NetworkConfigPage,
+            "system": SystemConfigPage,
             "devices": DevicesPage,
             "scanner": ScannerPage,
             "ota": OTAPage,

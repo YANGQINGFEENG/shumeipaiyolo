@@ -365,7 +365,7 @@ class UploadService:
             return {"success": False, "error": str(e)}
 
     def fetch_pending_commands(self, actuator_ids: List[str] = None) -> List[Dict]:
-        """从服务器拉取待执行的控制指令
+        """从服务器拉取待执行的控制指令（并行查询）
 
         按协议规范：GET /api/actuators/{actuator_id}/commands
 
@@ -381,25 +381,31 @@ class UploadService:
 
         try:
             server_url = self._get_server_url()
-            timeout = self._get_timeout()
+            timeout = min(2, self._get_timeout())  # 命令查询超时限制为2秒
 
-            # 逐个查询每个执行器的待执行指令
-            for actuator_id in actuator_ids:
-                try:
-                    resp = requests.get(
-                        f"{server_url}/api/actuators/{actuator_id}/commands",
-                        timeout=timeout,
-                    )
-                    logger.debug(f"[命令] 查询 {actuator_id} 响应: status={resp.status_code}, body={resp.text}")
-                    if resp.status_code == 200:
-                        result = resp.json()
-                        if result.get("success") and result.get("data"):
-                            commands.append(result["data"])
-                            logger.info(f"[命令] 获取到指令: {result['data']}")
-                        else:
-                            logger.debug(f"[命令] {actuator_id} 无待执行指令: {result}")
-                except Exception as e:
-                    logger.error(f"Fetch command for {actuator_id} error: {e}")
+            # 使用线程池并行查询多个执行器
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                # 提交所有查询任务
+                futures = {
+                    executor.submit(
+                        self._fetch_single_command,
+                        server_url,
+                        actuator_id,
+                        timeout
+                    ): actuator_id
+                    for actuator_id in actuator_ids
+                }
+
+                # 收集结果
+                for future in concurrent.futures.as_completed(futures):
+                    actuator_id = futures[future]
+                    try:
+                        result = future.result()
+                        if result:
+                            commands.append(result)
+                    except Exception as e:
+                        logger.error(f"Fetch command for {actuator_id} error: {e}")
 
             if commands:
                 logger.info(f"[命令] 获取到 {len(commands)} 条待执行指令")
@@ -407,6 +413,36 @@ class UploadService:
             logger.error(f"Fetch commands error: {e}")
 
         return commands
+
+    def _fetch_single_command(self, server_url: str, actuator_id: str, timeout: float) -> Optional[Dict]:
+        """查询单个执行器的待执行指令
+
+        Args:
+            server_url: 服务器地址
+            actuator_id: 执行器ID
+            timeout: 超时时间（秒）
+
+        Returns:
+            指令数据（如果有待执行指令），否则返回 None
+        """
+        try:
+            resp = requests.get(
+                f"{server_url}/api/actuators/{actuator_id}/commands",
+                timeout=timeout,
+            )
+            logger.debug(f"[命令] 查询 {actuator_id} 响应: status={resp.status_code}, body={resp.text}")
+            if resp.status_code == 200:
+                result = resp.json()
+                if result.get("success") and result.get("data"):
+                    logger.info(f"[命令] 获取到指令: {result['data']}")
+                    return result["data"]
+                else:
+                    logger.debug(f"[命令] {actuator_id} 无待执行指令")
+        except requests.exceptions.Timeout:
+            logger.warning(f"[命令] 查询 {actuator_id} 超时")
+        except Exception as e:
+            logger.error(f"[命令] 查询 {actuator_id} 异常: {e}")
+        return None
 
     def get_status(self) -> Dict[str, Any]:
         """获取上传服务状态"""
